@@ -1,0 +1,4795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TodoMaster - 智能待办事项管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --accent: #8b5cf6;
+      --accent-light: #a78bfa;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --bg-primary: #fafafa;
+      --bg-card: #ffffff;
+      --bg-hover: #f5f3ff;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      /* Priority Colors */
+      --priority-urgent-important: #ef4444;
+      --priority-urgent-important-bg: #fef2f2;
+      --priority-urgent: #f59e0b;
+      --priority-urgent-bg: #fffbeb;
+      --priority-important: #3b82f6;
+      --priority-important-bg: #eff6ff;
+      --priority-normal: #10b981;
+      --priority-normal-bg: #ecfdf5;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Firebase Setup Banner */
+    .setup-banner {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-bottom: 1px solid #f59e0b;
+      padding: 16px 24px;
+      display: none;
+    }
+
+    .setup-banner.show {
+      display: block;
+    }
+
+    .setup-banner-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .setup-banner-icon {
+      width: 40px;
+      height: 40px;
+      background: #f59e0b;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .setup-banner-text {
+      flex: 1;
+    }
+
+    .setup-banner-title {
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 4px;
+    }
+
+    .setup-banner-desc {
+      font-size: 13px;
+      color: #a16207;
+    }
+
+    .setup-banner-btn {
+      padding: 8px 16px;
+      background: #f59e0b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .setup-banner-btn:hover {
+      background: #d97706;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    /* Scene Switcher */
+    .scene-switcher {
+      display: flex;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .scene-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border: none;
+      border-radius: 16px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .scene-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .scene-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .scene-btn svg {
+      flex-shrink: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Mobile Responsive Header */
+    @media (max-width: 768px) {
+      .header-inner {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 8px 0;
+      }
+
+      .scene-switcher {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+      }
+
+      .header-actions {
+        gap: 8px;
+      }
+
+      .view-tabs {
+        display: none; /* 手机端隐藏顶部视图切换，用底部导航 */
+      }
+
+      .sync-status {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      .scene-btn {
+        padding: 3px 10px;
+        font-size: 12px;
+      }
+    }
+
+    /* Sync Status */
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--border-light);
+      color: var(--text-secondary);
+    }
+
+    .sync-status.synced {
+      background: #d1fae5;
+      color: #047857;
+    }
+
+    .sync-status.syncing {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .sync-status.offline {
+      background: var(--border-light);
+      color: var(--text-muted);
+    }
+
+    .sync-status.error {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .sync-status.syncing .sync-dot {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .view-tabs {
+      display: flex;
+      background: var(--border-light);
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .view-tab {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .view-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .view-tab.active {
+      background: var(--bg-card);
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+      padding: 8px 16px;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--primary-light);
+    }
+
+    /* Main Content */
+    .main {
+      padding: 32px 0;
+    }
+
+    /* Calendar View */
+    .calendar-view {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .calendar-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      min-width: 200px;
+      text-align: center;
+    }
+
+    .nav-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .today-btn {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .calendar-grid {
+      background: var(--bg-card);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--border-light);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .weekday {
+      padding: 12px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .weekday:nth-child(7), .weekday:last-child {
+      color: var(--danger);
+    }
+
+    .calendar-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+
+    .calendar-day {
+      min-height: 120px;
+      padding: 8px;
+      border-right: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .calendar-day:nth-child(7n) {
+      border-right: none;
+    }
+
+    .calendar-day:hover {
+      background: var(--bg-hover);
+    }
+
+    .calendar-day.other-month {
+      background: var(--border-light);
+    }
+
+    .calendar-day.other-month .day-number {
+      color: var(--text-muted);
+    }
+
+    .calendar-day.today .day-number {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+    }
+
+    .day-number {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 50%;
+      margin-bottom: 6px;
+    }
+
+    .day-tasks {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .day-task-item {
+      padding: 4px;
+      font-size: 11px;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border-left: 2px solid var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .day-task-item:hover {
+      background: var(--primary-light);
+      color: white;
+    }
+
+    .day-task-item:hover .day-task-checkbox {
+      border-color: white;
+    }
+
+    .day-task-item.completed {
+      background: var(--border-light);
+      color: var(--text-muted);
+      text-decoration: line-through;
+      border-left-color: var(--text-muted);
+    }
+
+    .day-task-item.overdue {
+      background: var(--danger-light);
+      color: var(--danger);
+      border-left-color: var(--danger);
+    }
+
+    .day-task-item.pending {
+      background: #fef3c7;
+      color: #b45309;
+      border-left-color: var(--warning);
+    }
+
+    .day-task-item.subtask-day-item {
+      /* background: rgba(124, 58, 237, 0.06); */ /* 注释掉紫色背景，让优先级样式生效 */
+      color: var(--text-secondary);
+      border-left-color: var(--accent);
+      margin-left: 8px;
+      font-size: 10px;
+    }
+
+    .day-task-item.subtask-day-item:hover {
+      /* background: rgba(124, 58, 237, 0.15); */ /* 注释掉紫色背景，让优先级样式生效 */
+      color: var(--accent);
+    }
+
+    /* Priority colors for calendar task items */
+    .day-task-item.priority-urgent-important {
+      background: var(--priority-urgent-important-bg);
+      color: var(--priority-urgent-important);
+      border-left: 3px solid var(--priority-urgent-important);
+    }
+
+    .day-task-item.priority-urgent {
+      background: var(--priority-urgent-bg);
+      color: var(--priority-urgent);
+      border-left: 3px solid var(--priority-urgent);
+    }
+
+    .day-task-item.priority-important {
+      background: var(--priority-important-bg);
+      color: var(--priority-important);
+      border-left: 3px solid var(--priority-important);
+    }
+
+    .day-task-item.priority-normal {
+      background: var(--priority-normal-bg);
+      color: var(--priority-normal);
+      border-left: 3px solid var(--priority-normal);
+    }
+
+    .day-task-checkbox {
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      border: 2px solid var(--border);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .day-task-checkbox.checked {
+      background: var(--success);
+      border-color: var(--success);
+      color: white;
+    }
+
+    .day-task-content {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .task-count-badge {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* List View */
+    .list-view {
+      animation: fadeIn 0.3s ease;
+    }
+
+    .list-section {
+      margin-bottom: 32px;
+    }
+
+    .list-section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    .list-section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .list-section-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--border-light);
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+
+    .list-task {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+
+    .list-task:hover {
+      border-color: var(--primary-light);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+    }
+
+    .list-task.completed {
+      opacity: 0.6;
+      background: var(--border-light);
+    }
+
+    .list-task.completed .task-content-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .list-task.overdue {
+      border-left: 3px solid var(--danger);
+    }
+
+    .task-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .task-checkbox:hover {
+      border-color: var(--primary);
+    }
+
+    .task-checkbox.checked {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .task-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-content-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .task-content-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .task-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .task-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .task-tag.overdue-tag {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .task-tag.postpone-tag {
+      background: var(--bg-hover);
+      color: var(--accent);
+    }
+
+    .task-tag.subtask-count-tag {
+      background: rgba(124, 58, 237, 0.08);
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .task-tag.category-tag {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--priority-important);
+      font-weight: 500;
+    }
+
+    /* Completed tag filter */
+    .completed-tag-filter {
+      display: flex;
+      gap: 6px;
+      padding: 8px 16px;
+      flex-wrap: wrap;
+    }
+
+    .tag-filter-btn {
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tag-filter-btn:hover {
+      border-color: var(--text-muted);
+    }
+
+    .tag-filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .task-subtasks-progress {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .task-subtasks-progress .progress-bar {
+      width: 60px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .task-subtasks-progress .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.3s ease;
+    }
+
+    .task-date-time {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .list-task:hover .task-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-hover);
+      color: var(--primary);
+    }
+
+    .action-btn.delete:hover {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .action-btn.postpone:hover {
+      background: var(--bg-hover);
+      color: var(--accent);
+    }
+
+    /* Subtasks */
+    .subtasks-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .subtasks-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .subtasks-title {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .add-subtask-btn {
+      font-size: 12px;
+      color: var(--primary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .add-subtask-btn:hover {
+      color: var(--primary-dark);
+    }
+
+    .subtask-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .subtask-item:last-of-type {
+      border-bottom: none;
+    }
+
+    .subtask-item-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .subtask-content-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subtask-checkbox {
+      width: 18px;
+      height: 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .subtask-checkbox:hover {
+      border-color: var(--primary);
+    }
+
+    .subtask-checkbox.checked {
+      background: var(--success);
+      border-color: var(--success);
+      color: white;
+    }
+
+    .subtask-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .subtask-item.completed .subtask-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .subtask-due-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .subtask-due-date.overdue {
+      color: var(--danger);
+    }
+
+    .subtask-actions {
+      display: flex;
+      gap: 2px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .subtask-item:hover .subtask-actions {
+      opacity: 1;
+    }
+
+    .subtask-action-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .subtask-action-btn:hover {
+      background: var(--bg-hover);
+      color: var(--primary);
+    }
+
+    .subtask-action-btn.delete:hover {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .subtask-add-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .subtask-add-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+    }
+
+    .subtask-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .modal-subtask-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .modal-subtask-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-hover);
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtask-item-text {
+      flex: 1;
+      font-size: 13px;
+    }
+
+    .modal-subtask-item-date {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .modal-subtask-item-edit,
+    .modal-subtask-item-postpone,
+    .modal-subtask-item-delete {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .modal-subtask-item-edit:hover {
+      background: var(--priority-urgent-bg);
+      color: var(--priority-urgent);
+    }
+
+    .modal-subtask-item-postpone:hover {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--accent);
+    }
+
+    .modal-subtask-item-delete:hover {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .subtask-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .subtask-input:focus {
+      border-color: var(--primary);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .empty-icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, var(--primary-light), var(--accent-light));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.9;
+    }
+
+    .empty-icon svg {
+      width: 60px;
+      height: 60px;
+      color: white;
+    }
+
+    .empty-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      animation: modalIn 0.3s ease;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-label.required::after {
+      content: ' *';
+      color: var(--danger);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--border-light);
+      border-radius: 0 0 16px 16px;
+    }
+
+    .btn-save {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-cancel {
+      padding: 10px 20px;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-cancel:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    /* Day Detail Modal */
+    .day-detail-modal {
+      z-index: 1000;
+    }
+
+    /* Task Modal and Postpone Modal should always be above Day Detail Modal */
+    #taskModal,
+    #postponeModal {
+      z-index: 1100;
+    }
+
+    /* Subtask Edit Modal */
+    #subtaskEditModal,
+    #subtaskPostponeModal {
+      z-index: 1200;
+    }
+
+    .subtask-edit-modal-content {
+      background: var(--bg-card);
+      border-radius: 16px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      animation: modalIn 0.2s ease;
+    }
+
+    .subtask-edit-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .subtask-edit-modal-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .subtask-edit-modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .subtask-edit-modal-close:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .subtask-edit-modal-body {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .subtask-edit-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .subtask-edit-field input[type="text"],
+    .subtask-edit-field input[type="date"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      outline: none;
+      transition: border-color 0.15s ease;
+      box-sizing: border-box;
+    }
+
+    .subtask-edit-field input:focus {
+      border-color: var(--primary);
+    }
+
+    .subtask-edit-priority-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .subtask-edit-priority-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .subtask-edit-priority-btn:hover {
+      border-color: var(--text-muted);
+    }
+
+    .subtask-edit-priority-btn.active {
+      border-color: var(--primary);
+      background: rgba(124, 58, 237, 0.06);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .priority-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .subtask-edit-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .subtask-edit-modal-footer .btn-cancel {
+      padding: 8px 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .subtask-edit-modal-footer .btn-cancel:hover {
+      background: var(--bg-secondary);
+    }
+
+    .subtask-edit-modal-footer .btn-save {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .subtask-edit-modal-footer .btn-save:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Task modal scrollable body */
+    #taskModal .modal {
+      max-height: 85vh;
+      max-width: 480px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #taskModal .modal-body {
+      overflow-y: auto;
+      flex: 1;
+      max-height: calc(85vh - 140px);
+      padding: 20px 24px;
+    }
+
+    #taskModal .modal-header {
+      flex-shrink: 0;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #taskModal .modal-footer {
+      flex-shrink: 0;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    /* Priority Selector Styles */
+    .priority-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .priority-option {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .priority-option input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .priority-label {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .priority-option input:checked + .priority-label {
+      border-width: 2px;
+      border-style: solid;
+    }
+
+    .priority-urgent-important .priority-label {
+      color: var(--priority-urgent-important);
+      background: var(--priority-urgent-important-bg);
+    }
+
+    .priority-urgent-important input:checked + .priority-label {
+      border-color: var(--priority-urgent-important);
+      background: var(--priority-urgent-important-bg);
+    }
+
+    .priority-urgent .priority-label {
+      color: var(--priority-urgent);
+      background: var(--priority-urgent-bg);
+    }
+
+    .priority-urgent input:checked + .priority-label {
+      border-color: var(--priority-urgent);
+      background: var(--priority-urgent-bg);
+    }
+
+    .priority-important .priority-label {
+      color: var(--priority-important);
+      background: var(--priority-important-bg);
+    }
+
+    .priority-important input:checked + .priority-label {
+      border-color: var(--priority-important);
+      background: var(--priority-important-bg);
+    }
+
+    .priority-normal .priority-label {
+      color: var(--priority-normal);
+      background: var(--priority-normal-bg);
+    }
+
+    .priority-normal input:checked + .priority-label {
+      border-color: var(--priority-normal);
+      background: var(--priority-normal-bg);
+    }
+
+    /* Priority Tags */
+    .priority-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .priority-tag.urgent-important {
+      background: var(--priority-urgent-important-bg);
+      color: var(--priority-urgent-important);
+    }
+
+    .priority-tag.urgent {
+      background: var(--priority-urgent-bg);
+      color: var(--priority-urgent);
+    }
+
+    .priority-tag.important {
+      background: var(--priority-important-bg);
+      color: var(--priority-important);
+    }
+
+    .priority-tag.normal {
+      background: var(--priority-normal-bg);
+      color: var(--priority-normal);
+    }
+
+    .day-detail-modal .modal {
+      max-width: 700px;
+      animation: modalZoomIn 0.3s ease;
+    }
+
+    @keyframes modalZoomIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .day-detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, var(--bg-card), var(--bg-hover));
+    }
+
+    .day-detail-date {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .day-detail-count {
+      font-size: 14px;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* Matrix View (Four Quadrants with Axes) */
+    .matrix-view {
+      padding: 20px 0;
+    }
+
+    .matrix-wrapper {
+      position: relative;
+      padding: 0 40px;
+    }
+
+    /* Y-axis label (重要) */
+    .matrix-y-label {
+      position: absolute;
+      left: 6px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 6px;
+      white-space: nowrap;
+    }
+
+    /* X-axis label (紧急) */
+    .matrix-x-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 6px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 2px;
+      min-height: calc(100vh - 240px);
+      background: var(--border);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .matrix-quadrant {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Quadrant backgrounds */
+    .quadrant-1 { background: linear-gradient(135deg, #fff5f5, var(--bg-card)); }
+    .quadrant-2 { background: linear-gradient(135deg, #fffbeb, var(--bg-card)); }
+    .quadrant-3 { background: linear-gradient(135deg, #eff6ff, var(--bg-card)); }
+    .quadrant-4 { background: linear-gradient(135deg, #ecfdf5, var(--bg-card)); }
+
+    .quadrant-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .quadrant-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .quadrant-header h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .quadrant-count {
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: var(--bg-hover);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .quadrant-tasks {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .matrix-task-item {
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+
+    .matrix-task-item:hover {
+      background: white;
+      border-color: var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .matrix-task-item.completed {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .matrix-task-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .matrix-task-checkbox.checked {
+      background: var(--success);
+      border-color: var(--success);
+      color: white;
+    }
+
+    .matrix-task-content {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .matrix-task-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* Axis labels row below grid */
+    .matrix-x-ticks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin-top: 0;
+    }
+
+    .matrix-x-tick {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 6px 0 0;
+    }
+
+    /* Y-axis ticks - positioned absolutely on left */
+    .matrix-y-ticks {
+      position: absolute;
+      left: 30px;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px 0;
+      pointer-events: none;
+    }
+
+    .matrix-y-tick {
+      font-size: 10px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    @media (max-width: 768px) {
+      .matrix-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        min-height: auto;
+      }
+      .matrix-y-label,
+      .matrix-y-ticks { display: none; }
+      .matrix-wrapper { padding: 0 16px; }
+      .matrix-x-ticks { grid-template-columns: 1fr; }
+    }
+
+    .day-detail-body {
+      padding: 20px 24px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .day-detail-empty {
+      text-align: center;
+      padding: 60px 40px;
+      color: var(--text-secondary);
+    }
+
+    .day-detail-empty-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      background: var(--border-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .day-detail-empty-icon svg {
+      width: 40px;
+      height: 40px;
+      color: var(--text-muted);
+    }
+
+    .day-detail-summary {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--bg-hover);
+      border-radius: 12px;
+    }
+
+    .day-detail-stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .day-detail-stat-number {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .day-detail-add-btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .day-detail-add-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Firebase Setup Modal */
+    .setup-modal .modal {
+      max-width: 600px;
+    }
+
+    .setup-modal .modal-body {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .setup-step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setup-step:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .step-content p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .config-textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+
+    .config-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-inner {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 12px 0;
+      }
+
+      .logo {
+        font-size: 18px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .sync-status {
+        display: none;
+      }
+
+      .view-tabs {
+        flex: 1;
+      }
+
+      .view-tab {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .btn-primary span {
+        display: none;
+      }
+
+      .calendar-day {
+        min-height: 80px;
+        padding: 4px;
+      }
+
+      .day-number {
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+      }
+
+      .day-task-item {
+        font-size: 10px;
+        padding: 2px 4px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .task-actions {
+        opacity: 1;
+      }
+    }
+
+    /* Hidden utility */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- Firebase Setup Banner -->
+  <div class="setup-banner" id="setupBanner">
+    <div class="setup-banner-content">
+      <div class="setup-banner-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <div class="setup-banner-text">
+        <div class="setup-banner-title">需要配置 Firebase 才能启用云同步</div>
+        <div class="setup-banner-desc">配置后，你的待办事项将在手机和电脑间自动同步</div>
+      </div>
+      <button class="setup-banner-btn" onclick="openSetupModal()">立即配置</button>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="container header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+          </svg>
+        </div>
+        <span>TodoMaster</span>
+        <div class="scene-switcher">
+          <button class="scene-btn active" data-scene="work" onclick="switchScene('work')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            工作
+          </button>
+          <button class="scene-btn" data-scene="life" onclick="switchScene('life')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            生活
+          </button>
+        </div>
+      </div>
+      <div class="header-actions">
+        <!-- Sync Status -->
+        <div class="sync-status" id="syncStatus" onclick="openAuthModal()" style="cursor: pointer;" title="点击登录账号">
+          <span class="sync-dot"></span>
+          <span id="syncText">初始化中...</span>
+        </div>
+
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="calendar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            日历
+          </button>
+          <button class="view-tab" data-view="list">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            列表
+          </button>
+          <button class="view-tab" data-view="matrix">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            四象限
+          </button>
+        </div>
+        <button class="btn-primary" id="addTaskBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>添加任务</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <!-- Calendar View -->
+      <div class="calendar-view" id="calendarView">
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button class="nav-btn" id="prevMonth">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <div class="calendar-title" id="calendarTitle"></div>
+            <button class="nav-btn" id="nextMonth">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+          <button class="nav-btn today-btn" id="todayBtn">今天</button>
+        </div>
+        <div class="calendar-grid">
+          <div class="calendar-weekdays">
+            <div class="weekday">日</div>
+            <div class="weekday">一</div>
+            <div class="weekday">二</div>
+            <div class="weekday">三</div>
+            <div class="weekday">四</div>
+            <div class="weekday">五</div>
+            <div class="weekday">六</div>
+          </div>
+          <div class="calendar-days" id="calendarDays"></div>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div class="list-view hidden" id="listView">
+        <!-- Will be rendered by JS -->
+      </div>
+
+      <!-- Matrix View (Four Quadrants) -->
+      <div class="matrix-view hidden" id="matrixView">
+        <div class="matrix-wrapper">
+          <span class="matrix-y-label">重 要</span>
+          <div class="matrix-y-ticks">
+            <span class="matrix-y-tick">重要 ↑</span>
+            <span class="matrix-y-tick">↓ 不重要</span>
+          </div>
+          <div class="matrix-grid">
+            <!-- Row 1 (Top = Important): Left=Not Urgent, Right=Urgent -->
+            <div class="matrix-quadrant quadrant-3">
+              <div class="quadrant-header">
+                <span class="quadrant-dot" style="background: var(--priority-important);"></span>
+                <h3>不紧急 · 重要</h3>
+                <span class="quadrant-count" id="quadrant3Count">0</span>
+              </div>
+              <div class="quadrant-tasks" id="quadrant3Tasks"></div>
+            </div>
+            <div class="matrix-quadrant quadrant-1">
+              <div class="quadrant-header">
+                <span class="quadrant-dot" style="background: var(--priority-urgent-important);"></span>
+                <h3>紧急 · 重要</h3>
+                <span class="quadrant-count" id="quadrant1Count">0</span>
+              </div>
+              <div class="quadrant-tasks" id="quadrant1Tasks"></div>
+            </div>
+            <!-- Row 2 (Bottom = Not Important): Left=Not Urgent, Right=Urgent -->
+            <div class="matrix-quadrant quadrant-4">
+              <div class="quadrant-header">
+                <span class="quadrant-dot" style="background: var(--priority-normal);"></span>
+                <h3>不紧急 · 不重要</h3>
+                <span class="quadrant-count" id="quadrant4Count">0</span>
+              </div>
+              <div class="quadrant-tasks" id="quadrant4Tasks"></div>
+            </div>
+            <div class="matrix-quadrant quadrant-2">
+              <div class="quadrant-header">
+                <span class="quadrant-dot" style="background: var(--priority-urgent);"></span>
+                <h3>紧急 · 不重要</h3>
+                <span class="quadrant-count" id="quadrant2Count">0</span>
+              </div>
+              <div class="quadrant-tasks" id="quadrant2Tasks"></div>
+            </div>
+          </div>
+          <div class="matrix-x-ticks">
+            <span class="matrix-x-tick">← 不紧急</span>
+            <span class="matrix-x-tick">紧急 →</span>
+          </div>
+          <div class="matrix-x-label">紧 急</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Task Modal -->
+  <div class="modal-overlay hidden" id="taskModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">添加新任务</h3>
+        <button class="modal-close" id="closeTaskModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="taskForm">
+          <input type="hidden" id="taskId">
+          <div class="form-group">
+            <label class="form-label required">任务内容</label>
+            <input type="text" class="form-input" id="taskContent" placeholder="输入任务内容..." required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label required">到期日期</label>
+              <input type="date" class="form-input" id="taskDueDate" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">到期时间</label>
+              <input type="time" class="form-input" id="taskDueTime">
+            </div>
+          </div>
+          <!-- Priority Selection -->
+          <div class="form-group">
+            <label class="form-label">紧急程度</label>
+            <div class="priority-selector">
+              <label class="priority-option priority-urgent-important">
+                <input type="radio" name="taskPriority" value="urgent-important" id="priorityUrgentImportant">
+                <span class="priority-label">紧急且重要</span>
+              </label>
+              <label class="priority-option priority-urgent">
+                <input type="radio" name="taskPriority" value="urgent" id="priorityUrgent">
+                <span class="priority-label">紧急不重要</span>
+              </label>
+              <label class="priority-option priority-important">
+                <input type="radio" name="taskPriority" value="important" id="priorityImportant">
+                <span class="priority-label">不紧急重要</span>
+              </label>
+              <label class="priority-option priority-normal">
+                <input type="radio" name="taskPriority" value="normal" id="priorityNormal" checked>
+                <span class="priority-label">不紧急不重要</span>
+              </label>
+            </div>
+          </div>
+          <!-- Category Tag -->
+          <div class="form-group">
+            <label class="form-label">分类标签</label>
+            <div class="tag-input-wrapper">
+              <input type="text" class="form-input" id="taskTag" placeholder="输入分类标签，如：工作、学习、生活..." list="tagSuggestions">
+              <datalist id="tagSuggestions"></datalist>
+            </div>
+          </div>
+          <!-- Subtasks in Modal -->
+          <div class="form-group" id="modalSubtasksSection">
+            <label class="form-label">子任务（可选）</label>
+            <div id="modalSubtaskList"></div>
+            <div class="modal-subtask-input-row">
+              <input type="date" class="form-input" id="modalSubtaskDate" style="width: 120px;" placeholder="日期">
+              <select class="form-input" id="modalSubtaskPriority" style="width: 120px;">
+                <option value="urgent-important">紧急且重要</option>
+                <option value="urgent">紧急不重要</option>
+                <option value="important">不紧急重要</option>
+                <option value="normal" selected>不紧急不重要</option>
+              </select>
+              <input type="text" class="form-input" id="modalSubtaskInput" placeholder="输入子任务内容，按回车添加..." style="flex: 1;">
+              <button type="button" class="subtask-add-btn" onclick="addSubtaskFromModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelTask">取消</button>
+        <button class="btn-save" id="saveTask">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Postpone Modal -->
+  <div class="modal-overlay hidden" id="postponeModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">延期任务</h3>
+        <button class="modal-close" id="closePostponeModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
+          当前到期日: <strong id="currentDueDate"></strong></p>
+        <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
+          已延期次数: <strong id="postponeCount">0</strong> 次</p>
+        <div class="form-group">
+          <label class="form-label required">新的到期日期</label>
+          <input type="date" class="form-input" id="newDueDate">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelPostpone">取消</button>
+        <button class="btn-save" id="confirmPostpone">确认延期</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subtask Postpone Modal -->
+  <div class="modal-overlay hidden" id="subtaskPostponeModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">延期子任务</h3>
+        <button class="modal-close" onclick="closeSubtaskPostponeModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
+          子任务: <strong id="subtaskPostponeName"></strong></p>
+        <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
+          当前到期日: <strong id="subtaskCurrentDueDate"></strong></p>
+        <div class="form-group">
+          <label class="form-label required">新的到期日期</label>
+          <input type="date" class="form-input" id="subtaskNewDueDate">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeSubtaskPostponeModal()">取消</button>
+        <button class="btn-save" onclick="confirmSubtaskPostpone()">确认延期</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subtask Edit Modal -->
+  <div class="modal-overlay hidden" id="subtaskEditModal">
+    <div class="subtask-edit-modal-content">
+      <div class="subtask-edit-modal-header">
+        <h3>编辑子任务</h3>
+        <button class="subtask-edit-modal-close" onclick="closeSubtaskEditModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="subtask-edit-modal-body">
+        <div class="subtask-edit-field">
+          <label>子任务内容</label>
+          <input type="text" id="subtaskEditContent" placeholder="输入子任务内容">
+        </div>
+        <div class="subtask-edit-field">
+          <label>到期日期</label>
+          <input type="date" id="subtaskEditDate">
+        </div>
+        <div class="subtask-edit-field">
+          <label>分类标签</label>
+          <div class="subtask-edit-priority-grid">
+            <button type="button" class="subtask-edit-priority-btn" data-priority="urgent-important" onclick="selectSubtaskEditPriority('urgent-important')">
+              <span class="priority-dot" style="background: var(--priority-urgent-important)"></span>紧急且重要
+            </button>
+            <button type="button" class="subtask-edit-priority-btn" data-priority="urgent" onclick="selectSubtaskEditPriority('urgent')">
+              <span class="priority-dot" style="background: var(--priority-urgent)"></span>紧急不重要
+            </button>
+            <button type="button" class="subtask-edit-priority-btn" data-priority="important" onclick="selectSubtaskEditPriority('important')">
+              <span class="priority-dot" style="background: var(--priority-important)"></span>不紧急重要
+            </button>
+            <button type="button" class="subtask-edit-priority-btn" data-priority="normal" onclick="selectSubtaskEditPriority('normal')">
+              <span class="priority-dot" style="background: var(--priority-normal)"></span>不紧急不重要
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="subtask-edit-modal-footer">
+        <button class="btn-cancel" onclick="closeSubtaskEditModal()">取消</button>
+        <button class="btn-save" onclick="saveSubtaskEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Detail Modal -->
+  <div class="modal-overlay day-detail-modal hidden" id="dayDetailModal">
+    <div class="modal">
+      <div class="day-detail-header">
+        <h3 class="day-detail-date" id="dayDetailDate"></h3>
+        <span class="day-detail-count" id="dayDetailCount"></span>
+        <div style="flex: 1;"></div>
+        <button class="modal-close" id="closeDayDetailModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="day-detail-body" id="dayDetailBody">
+        <!-- Tasks will be rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Setup Modal -->
+  <div class="modal-overlay setup-modal hidden" id="setupModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Firebase 云同步配置</h3>
+        <button class="modal-close" onclick="closeSetupModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="setup-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>创建 Firebase 项目</h4>
+            <p>访问 <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--primary);">Firebase Console</a>，点击「添加项目」，创建一个新项目。</p>
+          </div>
+        </div>
+
+        <div class="setup-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>启用匿名登录</h4>
+            <p>在项目左侧菜单选择「Authentication」→「登录方式」，启用「匿名」和「邮箱链接（无密码）」。</p>
+          </div>
+        </div>
+
+        <div class="setup-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>创建 Firestore 数据库</h4>
+            <p>选择「Firestore Database」→「创建数据库」，选择「测试模式」开始使用。</p>
+          </div>
+        </div>
+
+        <div class="setup-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>获取配置信息</h4>
+            <p>进入「项目设置」（齿轮图标），滚动到「你的应用」，点击 Web 图标 (</>)，注册应用后复制配置代码。</p>
+            <textarea class="config-textarea" id="firebaseConfig" placeholder='粘贴你的 Firebase 配置，例如：
+{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "projectId": "your-app",
+  ...
+}'></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeSetupModal()">暂不配置</button>
+        <button class="btn-save" onclick="saveFirebaseConfig()">保存并连接</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay hidden" id="authModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">账号登录</h3>
+        <button class="modal-close" onclick="closeAuthModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="authLoginSection">
+          <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱，点击发送登录链接。打开邮件中的链接即可完成登录，无需密码。</p>
+          <div class="form-group">
+            <label class="form-label required">邮箱地址</label>
+            <input type="email" class="form-input" id="authEmail" placeholder="your@email.com">
+          </div>
+        </div>
+        <div id="authSentSection" class="hidden" style="text-align: center; padding: 20px 0;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
+            <path d="M22 2L11 13"></path>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+          </svg>
+          <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录链接已发送</p>
+          <p style="color: var(--text-secondary); font-size: 13px;">请检查邮箱 <strong id="sentEmail"></strong>，点击邮件中的链接完成登录。</p>
+          <p style="color: var(--text-muted); font-size: 12px; margin-top: 12px;">登录成功后页面会自动刷新</p>
+        </div>
+      </div>
+      <div class="modal-footer" id="authFooter">
+        <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
+        <button class="btn-save" id="sendAuthLinkBtn" onclick="sendAuthLink()">发送登录链接</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ==================== Firebase Configuration ====================
+    const FIREBASE_CONFIG_KEY = 'todomaster_firebase_config';
+
+    // Pre-configured Firebase settings
+    const PRESET_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCB8SurqrQLPOufK4y9hE1kWljDY9GE4Sk",
+      authDomain: "todo-list-d04e4.firebaseapp.com",
+      projectId: "todo-list-d04e4",
+      storageBucket: "todo-list-d04e4.firebasestorage.app",
+      messagingSenderId: "735195923916",
+      appId: "1:735195923916:web:ab2df8765f6d9230b68969",
+      measurementId: "G-6P6SL7VQKL"
+    };
+
+    let firebaseInitialized = false;
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let tasksUnsubscribe = null;
+
+    // Check if Firebase is configured
+    function isFirebaseConfigured() {
+      const config = localStorage.getItem(FIREBASE_CONFIG_KEY);
+      return config !== null;
+    }
+
+    // Get the active Firebase config (preset or user-configured)
+    function getFirebaseConfig() {
+      if (isFirebaseConfigured()) {
+        return JSON.parse(localStorage.getItem(FIREBASE_CONFIG_KEY));
+      }
+      return PRESET_FIREBASE_CONFIG;
+    }
+
+    // ==================== Auth Functions ====================
+    function openAuthModal() {
+      document.getElementById('authLoginSection').classList.remove('hidden');
+      document.getElementById('authSentSection').classList.add('hidden');
+      document.getElementById('authFooter').classList.remove('hidden');
+      document.getElementById('authEmail').value = '';
+      document.getElementById('authModal').classList.remove('hidden');
+      document.getElementById('authEmail').focus();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    async function sendAuthLink() {
+      const email = document.getElementById('authEmail').value.trim();
+      if (!email) {
+        alert('请输入邮箱地址');
+        return;
+      }
+
+      if (!auth) {
+        alert('Firebase 未初始化，请先配置');
+        return;
+      }
+
+      const btn = document.getElementById('sendAuthLinkBtn');
+      btn.disabled = true;
+      btn.textContent = '发送中...';
+
+      try {
+        const actionCodeSettings = {
+          url: 'https://yindeliang08.github.io/todomaster/',
+          handleCodeInApp: true
+        };
+
+        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+        localStorage.setItem('todomaster_auth_email', email);
+
+        document.getElementById('authLoginSection').classList.add('hidden');
+        document.getElementById('authSentSection').classList.remove('hidden');
+        document.getElementById('authFooter').classList.add('hidden');
+        document.getElementById('authFooter').classList.remove('hidden');
+        document.getElementById('sentEmail').textContent = email;
+      } catch (error) {
+        console.error('Send auth link failed:', error);
+        alert('发送失败：' + error.message);
+        btn.disabled = false;
+        btn.textContent = '发送登录链接';
+      }
+    }
+
+    async function checkAuthLink() {
+      // 检查当前 URL 是否是邮箱登录链接
+      if (!auth) return;
+      
+      try {
+        const isSignInLink = await auth.isSignInWithEmailLink(window.location.href);
+        if (!isSignInLink) return;
+        
+        console.log('Detected email sign-in link');
+        
+        // 检测到是邮箱登录链接
+        const email = localStorage.getItem('todomaster_auth_email');
+        
+        // 打开登录弹窗
+        document.getElementById('authModal').classList.remove('hidden');
+        
+        if (email) {
+          // 有存储的邮箱，自动完成登录
+          document.getElementById('authLoginSection').classList.remove('hidden');
+          document.getElementById('authSentSection').classList.add('hidden');
+          document.getElementById('authFooter').classList.remove('hidden');
+          document.getElementById('authEmail').value = email;
+          
+          try {
+            updateSyncStatus('syncing', '登录中...');
+            const result = await auth.signInWithEmailLink(email, window.location.href);
+            localStorage.removeItem('todomaster_auth_email');
+            updateSyncStatus('synced', result.user.email || '已登录');
+            closeAuthModal();
+            // 清理 URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (error) {
+            console.error('Sign in with link failed:', error);
+            alert('登录失败：' + error.message);
+            updateSyncStatus('error', '登录失败');
+            // 清理 URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } else {
+          // 没有存储的邮箱，让用户输入
+          document.getElementById('authLoginSection').classList.remove('hidden');
+          document.getElementById('authSentSection').classList.add('hidden');
+          document.getElementById('authFooter').classList.add('hidden'); // 隐藏发送按钮
+          document.getElementById('authEmail').focus();
+          
+          // 添加提示文字（如果还没有）
+          if (!document.getElementById('authLinkHint')) {
+            const hint = document.createElement('p');
+            hint.id = 'authLinkHint';
+            hint.style.cssText = 'color: var(--warning); font-size: 13px; margin-bottom: 12px; text-align: center;';
+            hint.textContent = '📧 请输入发送登录链接的邮箱地址';
+            
+            // 添加确认登录按钮
+            const confirmBtn = document.createElement('button');
+            confirmBtn.id = 'authConfirmBtn';
+            confirmBtn.className = 'btn-save';
+            confirmBtn.style.cssText = 'width: 100%; margin-top: 12px;';
+            confirmBtn.textContent = '确认登录';
+            confirmBtn.onclick = async () => {
+              const inputEmail = document.getElementById('authEmail').value.trim();
+              if (!inputEmail) {
+                alert('请输入邮箱地址');
+                return;
+              }
+              confirmBtn.disabled = true;
+              confirmBtn.textContent = '登录中...';
+              
+              try {
+                updateSyncStatus('syncing', '登录中...');
+                const result = await auth.signInWithEmailLink(inputEmail, window.location.href);
+                updateSyncStatus('synced', result.user.email || '已登录');
+                closeAuthModal();
+                // 清理 URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+              } catch (error) {
+                console.error('Sign in with link failed:', error);
+                alert('登录失败：' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '确认登录';
+                updateSyncStatus('error', '登录失败');
+              }
+            };
+            
+            // 插入到 authEmail input 后面
+            const loginSection = document.getElementById('authLoginSection');
+            loginSection.appendChild(hint);
+            loginSection.appendChild(confirmBtn);
+          }
+        }
+      } catch (error) {
+        console.error('Check auth link error:', error);
+      }
+    }
+
+    async function signOut() {
+      if (!auth) return;
+      try {
+        await auth.signOut();
+        state.tasks = [];
+        render();
+      } catch (error) {
+        console.error('Sign out failed:', error);
+      }
+    }
+
+    // Initialize Firebase
+    async function initFirebase() {
+      if (!isFirebaseConfigured() && !PRESET_FIREBASE_CONFIG) {
+        updateSyncStatus('error', '未配置');
+        document.getElementById('setupBanner').classList.add('show');
+        return false;
+      }
+
+      try {
+        const config = getFirebaseConfig();
+
+        // Initialize Firebase
+        if (!firebaseInitialized) {
+          firebase.initializeApp(config);
+          firebaseInitialized = true;
+        }
+
+        auth = firebase.auth();
+        db = firebase.firestore();
+
+        // Enable offline persistence
+        await db.enablePersistence({ synchronizeTabs: true });
+
+        updateSyncStatus('syncing', '连接中...');
+
+        // Listen to auth state
+        auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            currentUser = user;
+            console.log('Firebase authenticated:', user.uid, user.email || '(anonymous)');
+            updateSyncStatus('synced', user.email ? user.email : '已同步');
+            await listenToTasks();
+          } else {
+            // Sign in anonymously
+            try {
+              const result = await auth.signInAnonymously();
+              currentUser = result.user;
+              console.log('Signed in anonymously:', currentUser.uid);
+              updateSyncStatus('synced', '未登录');
+            } catch (error) {
+              console.error('Anonymous sign-in failed:', error);
+              updateSyncStatus('error', '登录失败');
+            }
+          }
+        });
+
+        return true;
+      } catch (error) {
+        console.error('Firebase initialization failed:', error);
+        updateSyncStatus('error', '初始化失败');
+        return false;
+      }
+    }
+
+    // Listen to tasks collection
+    async function listenToTasks() {
+      if (!currentUser || !db) return;
+
+      // Unsubscribe from previous listener
+      if (tasksUnsubscribe) {
+        tasksUnsubscribe();
+      }
+
+      updateSyncStatus('syncing', '同步中...');
+
+      const tasksRef = db.collection('users').doc(currentUser.uid).collection('tasks_' + state.currentScene);
+
+      tasksUnsubscribe = tasksRef.onSnapshot((snapshot) => {
+        const cloudTasks = [];
+        snapshot.forEach((doc) => {
+          cloudTasks.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Merge with local tasks
+        if (state.tasks.length === 0 && cloudTasks.length > 0) {
+          // First load - use cloud data
+          state.tasks = cloudTasks;
+          saveTasksLocal();
+        } else {
+          // Update from cloud changes
+          cloudTasks.forEach(cloudTask => {
+            const localTask = state.tasks.find(t => t.id === cloudTask.id);
+            if (!localTask) {
+              state.tasks.push(cloudTask);
+            }
+          });
+          saveTasksLocal();
+        }
+
+        render();
+        updateSyncStatus('synced', '已同步');
+      }, (error) => {
+        console.error('Listen failed:', error);
+        updateSyncStatus('error', '同步错误');
+      });
+    }
+
+    // Update sync status UI
+    function updateSyncStatus(status, text) {
+      const statusEl = document.getElementById('syncStatus');
+      const textEl = document.getElementById('syncText');
+
+      statusEl.className = 'sync-status ' + status;
+      textEl.textContent = text;
+    }
+
+    // ==================== Firebase Config Modal ====================
+    function openSetupModal() {
+      document.getElementById('setupModal').classList.remove('hidden');
+      const savedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+      if (savedConfig) {
+        document.getElementById('firebaseConfig').value = savedConfig;
+      }
+    }
+
+    function closeSetupModal() {
+      document.getElementById('setupModal').classList.add('hidden');
+    }
+
+    function saveFirebaseConfig() {
+      const configText = document.getElementById('firebaseConfig').value.trim();
+      if (!configText) {
+        alert('请粘贴 Firebase 配置信息');
+        return;
+      }
+
+      try {
+        const config = JSON.parse(configText);
+        localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+        closeSetupModal();
+        location.reload();
+      } catch (e) {
+        alert('配置格式错误，请检查 JSON 格式');
+      }
+    }
+
+    // ==================== State Management ====================
+    const state = {
+      currentScene: 'work', // 'work' or 'life'
+      tasks: [],
+      currentView: 'calendar',
+      currentMonth: new Date(),
+      selectedTaskId: null,
+      selectedDate: null,
+      modalSubtasks: [] // Store subtasks being added in modal
+    };
+
+    // Local Storage
+
+    function switchScene(scene) {
+      if (state.currentScene === scene) return;
+      
+      // Save current scene tasks
+      saveTasksLocal();
+      
+      // Switch scene
+      state.currentScene = scene;
+      localStorage.setItem('todomaster_scene', scene);
+      
+      // Update UI
+      document.querySelectorAll('.scene-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scene === scene);
+      });
+      
+      // Apply theme
+      applySceneTheme(scene);
+      
+      // Load new scene tasks
+      loadTasksLocal();
+      
+      // Re-setup Firebase listener for new scene
+      if (state.db) {
+        listenToTasks();
+      }
+      
+      render();
+    }
+
+    function applySceneTheme(scene) {
+      const root = document.documentElement;
+      if (scene === 'life') {
+        root.style.setProperty('--primary', '#f472b6');
+        root.style.setProperty('--primary-dark', '#db2777');
+        root.style.setProperty('--accent', '#fb923c');
+        root.style.setProperty('--accent-light', '#fdba74');
+        root.style.setProperty('--bg-hover', '#fdf2f8');
+        root.style.setProperty('--bg-primary', '#fffbfc');
+        root.style.setProperty('--border', '#fce7f3');
+        root.style.setProperty('--border-light', '#fdf2f8');
+      } else {
+        root.style.setProperty('--primary', '#7c3aed');
+        root.style.setProperty('--primary-dark', '#4f46e5');
+        root.style.setProperty('--accent', '#8b5cf6');
+        root.style.setProperty('--accent-light', '#a78bfa');
+        root.style.setProperty('--bg-hover', '#f5f3ff');
+        root.style.setProperty('--bg-primary', '#fafafa');
+        root.style.setProperty('--border', '#e5e7eb');
+        root.style.setProperty('--border-light', '#f3f4f6');
+      }
+    }
+
+    function loadTasksLocal() {
+      try {
+        const key = 'todomaster_tasks_' + state.currentScene;
+        const data = localStorage.getItem(key);
+        if (data) {
+          state.tasks = JSON.parse(data);
+        } else {
+          state.tasks = [];
+        }
+      } catch (e) {
+        console.error('Failed to load local tasks:', e);
+        state.tasks = [];
+      }
+    }
+
+    function saveTasksLocal() {
+      try {
+        const key = 'todomaster_tasks_' + state.currentScene;
+        localStorage.setItem(key, JSON.stringify(state.tasks));
+      } catch (e) {
+        console.error('Failed to save local tasks:', e);
+      }
+    }
+
+    // Generate UUID
+    function generateId() {
+      if (crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // ==================== Firestore Operations ====================
+    async function saveTaskToFirestore(task) {
+      if (!db || !currentUser) return;
+
+      try {
+        const tasksRef = db.collection('users').doc(currentUser.uid).collection('tasks_' + state.currentScene);
+        await tasksRef.doc(task.id).set(task, { merge: true });
+      } catch (error) {
+        console.error('Failed to save to Firestore:', error);
+      }
+    }
+
+    async function deleteTaskFromFirestore(taskId) {
+      if (!db || !currentUser) return;
+
+      try {
+        const tasksRef = db.collection('users').doc(currentUser.uid).collection('tasks_' + state.currentScene);
+        await tasksRef.doc(taskId).delete();
+      } catch (error) {
+        console.error('Failed to delete from Firestore:', error);
+      }
+    }
+
+    // ==================== Date Utilities ====================
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function formatDateLocale(dateStr) {
+      const date = new Date(dateStr);
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    function formatTime(time) {
+      if (!time) return '';
+      return time;
+    }
+
+    function isToday(dateStr) {
+      return dateStr === formatDate(new Date());
+    }
+
+    function isOverdue(dateStr, timeStr) {
+      const now = new Date();
+      const dueDate = new Date(dateStr);
+      if (timeStr) {
+        const [hours, minutes] = timeStr.split(':');
+        dueDate.setHours(parseInt(hours), parseInt(minutes));
+      } else {
+        dueDate.setHours(23, 59, 59);
+      }
+      return dueDate < now;
+    }
+
+    function isTodayOrBefore(dateStr) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const date = new Date(dateStr);
+      return date <= today;
+    }
+
+    function getDaysInMonth(year, month) {
+      return new Date(year, month + 1, 0).getDate();
+    }
+
+    function getFirstDayOfMonth(year, month) {
+      return new Date(year, month, 1).getDay();
+    }
+
+    // ==================== Task Operations ====================
+
+    // Update tag suggestions datalist from existing tags
+    function updateTagSuggestions() {
+      const tags = new Set();
+      state.tasks.forEach(t => {
+        if (t.tag) tags.add(t.tag);
+      });
+      const datalist = document.getElementById('tagSuggestions');
+      if (datalist) {
+        datalist.innerHTML = [...tags].map(tag => `<option value="${escapeHtml(tag)}">`).join('');
+      }
+    }
+
+    // Filter completed tasks by tag
+    function filterCompletedByTag(btn, tag) {
+      // Update active button
+      document.querySelectorAll('.tag-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Filter tasks in completed container
+      const container = document.querySelector('.completed-tasks-container');
+      if (!container) return;
+
+      container.querySelectorAll('.list-task').forEach(taskEl => {
+        if (!tag) {
+          taskEl.style.display = '';
+        } else {
+          const taskTag = taskEl.dataset.tag || '';
+          taskEl.style.display = taskTag === tag ? '' : 'none';
+        }
+      });
+    }
+
+    function addTask(content, dueDate, dueTime, subtasks = [], priority = 'normal', tag = '') {
+      const task = {
+        id: generateId(),
+        content,
+        dueDate,
+        dueTime: dueTime || '',
+        completed: false,
+        completedAt: null,
+        createdAt: Date.now(),
+        postponeCount: 0,
+        postponeHistory: [],
+        subtasks: subtasks,
+        priority: priority,
+        tag: tag
+      };
+      state.tasks.push(task);
+      saveTasksLocal();
+      saveTaskToFirestore(task);
+      render();
+    }
+
+    function updateTask(id, content, dueDate, dueTime, subtasks, priority, tag = '') {
+      const task = state.tasks.find(t => t.id === id);
+      if (task) {
+        task.content = content;
+        task.dueDate = dueDate;
+        task.dueTime = dueTime || '';
+        task.subtasks = subtasks || [];
+        task.priority = priority || 'normal';
+        task.tag = tag;
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        render();
+      }
+    }
+
+    function deleteTask(id) {
+      state.tasks = state.tasks.filter(t => t.id !== id);
+      saveTasksLocal();
+      deleteTaskFromFirestore(id);
+      render();
+    }
+
+    function toggleTaskComplete(id) {
+      const task = state.tasks.find(t => t.id === id);
+      if (task) {
+        task.completed = !task.completed;
+        task.completedAt = task.completed ? Date.now() : null;
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        render();
+        // Re-render day detail modal if open
+        const dayDetailModal = document.getElementById('dayDetailModal');
+        if (dayDetailModal && !dayDetailModal.classList.contains('hidden')) {
+          const currentDate = state.selectedDate;
+          if (currentDate) {
+            openDayDetailModal(currentDate);
+          }
+        }
+      }
+    }
+
+    function postponeTask(id, newDate) {
+      const task = state.tasks.find(t => t.id === id);
+      if (task) {
+        task.postponeHistory.push({
+          date: task.dueDate,
+          newDate: newDate,
+          postponedAt: Date.now()
+        });
+        task.dueDate = newDate;
+        task.postponeCount++;
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        render();
+      }
+    }
+
+    // ==================== Subtask Operations ====================
+    function addSubtask(taskId, content, dueDate, priority = 'normal') {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.subtasks.push({
+          id: generateId(),
+          content,
+          completed: false,
+          dueDate: dueDate || '',
+          priority: priority // 'urgent-important', 'urgent', 'important', 'normal'
+        });
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        // Only re-render the subtask section, not the whole page
+        renderSubtaskSection(taskId);
+        // Also re-render day detail modal if open
+        const dayDetailModal = document.getElementById('dayDetailModal');
+        if (dayDetailModal && !dayDetailModal.classList.contains('hidden')) {
+          const currentDate = state.selectedDate;
+          if (currentDate) {
+            openDayDetailModal(currentDate);
+          }
+        }
+      }
+    }
+
+    function toggleSubtaskComplete(taskId, subtaskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        const subtask = task.subtasks.find(s => s.id === subtaskId);
+        if (subtask) {
+          subtask.completed = !subtask.completed;
+          saveTasksLocal();
+          saveTaskToFirestore(task);
+          renderSubtaskSection(taskId);
+          // Also re-render day detail modal if open
+          const dayDetailModal = document.getElementById('dayDetailModal');
+          if (dayDetailModal && !dayDetailModal.classList.contains('hidden')) {
+            const currentDate = state.selectedDate;
+            if (currentDate) {
+              openDayDetailModal(currentDate);
+            }
+          }
+        }
+      }
+    }
+
+    function deleteSubtask(taskId, subtaskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.subtasks = task.subtasks.filter(s => s.id !== subtaskId);
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        renderSubtaskSection(taskId);
+        // Also re-render day detail modal if open
+        const dayDetailModal = document.getElementById('dayDetailModal');
+        if (dayDetailModal && !dayDetailModal.classList.contains('hidden')) {
+          const currentDate = state.selectedDate;
+          if (currentDate) {
+            openDayDetailModal(currentDate);
+          }
+        }
+      }
+    }
+
+    function renderSubtaskSection(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+      const totalSubtasks = task.subtasks.length;
+      const progressPercent = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+      const today = formatDate(new Date());
+
+      // Update progress bar in list view
+      const taskEl = document.querySelector(`.list-task .task-checkbox[data-id="${taskId}"]`);
+      if (taskEl) {
+        const mainEl = taskEl.closest('.list-task');
+        const progressEl = mainEl.querySelector('.task-subtasks-progress');
+        if (progressEl) {
+          progressEl.querySelector('span').textContent = `${completedSubtasks}/${totalSubtasks}`;
+          const fill = progressEl.querySelector('.progress-fill');
+          if (fill) fill.style.width = `${progressPercent}%`;
+        }
+        // Update toggle/add button - only update HTML, event binding is handled in renderList
+        const actionsEl = mainEl.querySelector('.task-actions');
+        if (actionsEl) {
+          const existingToggle = actionsEl.querySelector('.toggle-subtasks');
+          const existingAdd = actionsEl.querySelector('.add-subtask-btn');
+          if (totalSubtasks > 0 && !existingToggle) {
+            // Replace add button with toggle button
+            if (existingAdd) existingAdd.remove();
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'action-btn toggle-subtasks';
+            toggleBtn.title = '子任务';
+            toggleBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>';
+            actionsEl.insertBefore(toggleBtn, actionsEl.firstChild);
+            // Bind event immediately for newly created button
+            toggleBtn.onclick = () => {
+              const sec = mainEl.querySelector('.subtasks-section');
+              sec.classList.toggle('hidden');
+            };
+          }
+          if (totalSubtasks === 0 && existingToggle) {
+            existingToggle.remove();
+            const addBtn = document.createElement('button');
+            addBtn.className = 'action-btn add-subtask-btn';
+            addBtn.dataset.taskId = taskId;
+            addBtn.title = '添加子任务';
+            addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+            actionsEl.insertBefore(addBtn, actionsEl.firstChild);
+            // Bind event immediately for newly created button
+            addBtn.onclick = () => showSubtaskInput(taskId);
+          }
+        }
+      }
+
+      // Re-render subtask section content
+      const sectionEl = document.getElementById(`subtasks-${taskId}`);
+      if (sectionEl) {
+        // Preserve current visibility state - only toggle button controls show/hide
+        const wasHidden = sectionEl.classList.contains('hidden');
+        const inputEl = sectionEl.querySelector('.subtask-input');
+        const inputValue = inputEl ? inputEl.value : '';
+        sectionEl.innerHTML = task.subtasks.map(st => {
+          const stOverdue = !st.completed && st.dueDate && st.dueDate < today;
+          return `
+            <div class="subtask-item ${st.completed ? 'completed' : ''}">
+              <div class="subtask-checkbox ${st.completed ? 'checked' : ''}" onclick="toggleSubtaskComplete('${taskId}', '${st.id}')">
+                ${st.completed ? `
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                ` : ''}
+              </div>
+              <div class="subtask-item-main">
+                <div class="subtask-content-row">
+                  <span class="subtask-text">${escapeHtml(st.content)}</span>
+                </div>
+              </div>
+              <div class="subtask-actions">
+                <button class="subtask-action-btn delete" title="删除" onclick="deleteSubtask('${taskId}', '${st.id}')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('') + `
+          <div class="subtask-input-row">
+            <input type="date" class="subtask-input" style="width: 100px; font-size: 12px; padding: 6px 8px;" title="子任务到期日期">
+            <select class="subtask-input" style="width: 110px; font-size: 12px; padding: 6px 8px;">
+              <option value="urgent-important">紧急且重要</option>
+              <option value="urgent">紧急不重要</option>
+              <option value="important">不紧急重要</option>
+              <option value="normal" selected>不紧急不重要</option>
+            </select>
+            <input type="text" class="subtask-input" placeholder="添加子任务..." data-task-id="${taskId}">
+            <button class="subtask-add-btn" onclick="submitSubtask('${taskId}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        `;
+        // Restore visibility state
+        if (wasHidden) {
+          sectionEl.classList.add('hidden');
+        }
+        // Re-bind input event
+        const newInput = sectionEl.querySelector('.subtask-input[data-task-id]');
+        if (newInput) {
+          newInput.value = inputValue;
+          // Only focus if section is visible
+          if (!wasHidden) {
+            newInput.focus();
+          }
+          newInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+              e.preventDefault();
+              const row = this.closest('.subtask-input-row');
+              const dateInput = row.querySelector('.subtask-input[type="date"]');
+              addSubtask(taskId, this.value.trim(), dateInput ? dateInput.value : '');
+              this.value = '';
+              if (dateInput) dateInput.value = '';
+            }
+          });
+        }
+      }
+    }
+
+    // Submit subtask from list view
+    function submitSubtask(taskId) {
+      const section = document.getElementById(`subtasks-${taskId}`);
+      if (!section) return;
+      const textInput = section.querySelector('.subtask-input[type="text"]');
+      const dateInput = section.querySelector('.subtask-input[type="date"]');
+      const prioritySelect = section.querySelector('.subtask-input[type="select"]');
+      const priority = prioritySelect ? prioritySelect.value : 'normal';
+      if (textInput && textInput.value.trim()) {
+        addSubtask(taskId, textInput.value.trim(), dateInput ? dateInput.value : '', priority);
+        textInput.value = '';
+        if (dateInput) dateInput.value = '';
+        textInput.focus();
+      }
+    }
+
+    // Submit subtask from day detail modal
+    function submitSubtaskFromModal(taskId) {
+      const modal = document.getElementById('dayDetailModal');
+      if (!modal) return;
+      const section = modal.querySelector(`#subtasks-${taskId}`);
+      if (!section) return;
+      const row = section.querySelector('.subtask-input-row');
+      if (!row) return;
+      const textInput = row.querySelector('input[type="text"]');
+      const dateInput = row.querySelector('input[type="date"]');
+      const prioritySelect = row.querySelector('select');
+      const priority = prioritySelect ? prioritySelect.value : 'normal';
+      if (textInput && textInput.value.trim()) {
+        addSubtask(taskId, textInput.value.trim(), dateInput ? dateInput.value : '', priority);
+        textInput.value = '';
+        if (dateInput) dateInput.value = '';
+        textInput.focus();
+      }
+    }
+
+    // ==================== Rendering ====================
+    function render() {
+      if (state.currentView === 'calendar') {
+        renderCalendar();
+      } else if (state.currentView === 'list') {
+        renderList();
+      } else if (state.currentView === 'matrix') {
+        renderMatrix();
+      }
+    }
+
+    function renderMatrix() {
+      const tasks = state.tasks;
+      
+      // Collect all items (tasks and subtasks) by priority
+      const items = {
+        'urgent-important': [],
+        'urgent': [],
+        'important': [],
+        'normal': []
+      };
+      
+      // Add main tasks
+      tasks.filter(t => !t.completed).forEach(task => {
+        const priority = task.priority || 'normal';
+        items[priority].push({
+          type: 'task',
+          id: task.id,
+          content: task.content,
+          dueDate: task.dueDate,
+          completed: task.completed,
+          parentId: null
+        });
+      });
+      
+      // Add subtasks
+      tasks.forEach(task => {
+        if (task.subtasks) {
+          task.subtasks.filter(st => !st.completed).forEach(st => {
+            const priority = st.priority || 'normal';
+            items[priority].push({
+              type: 'subtask',
+              id: st.id,
+              content: st.content,
+              dueDate: st.dueDate,
+              completed: st.completed,
+              parentId: task.id,
+              parentContent: task.content
+            });
+          });
+        }
+      });
+      
+      // Update counts (tasks + subtasks)
+      document.getElementById('quadrant1Count').textContent = items['urgent-important'].length;
+      document.getElementById('quadrant2Count').textContent = items['urgent'].length;
+      document.getElementById('quadrant3Count').textContent = items['important'].length;
+      document.getElementById('quadrant4Count').textContent = items['normal'].length;
+      
+      // Render each quadrant
+      renderQuadrantTasks('quadrant1Tasks', items['urgent-important']);
+      renderQuadrantTasks('quadrant2Tasks', items['urgent']);
+      renderQuadrantTasks('quadrant3Tasks', items['important']);
+      renderQuadrantTasks('quadrant4Tasks', items['normal']);
+    }
+
+    function renderQuadrantTasks(elementId, items) {
+      const container = document.getElementById(elementId);
+      if (!container) return;
+      
+      if (items.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 12px;">暂无任务</div>';
+        return;
+      }
+      
+      container.innerHTML = items.map(item => {
+        if (item.type === 'task') {
+          // Main task
+          return `
+            <div class="matrix-task-item ${item.completed ? 'completed' : ''}" onclick="openEditModal('${item.id}')">
+              <div class="matrix-task-checkbox ${item.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskComplete('${item.id}')">
+                ${item.completed ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+              </div>
+              <span class="matrix-task-content">${escapeHtml(item.content)}</span>
+              <span class="matrix-task-date">${formatDateLocale(item.dueDate)}</span>
+            </div>
+          `;
+        } else {
+          // Subtask - show with parent reference
+          return `
+            <div class="matrix-task-item subtask-item ${item.completed ? 'completed' : ''}" onclick="openEditModal('${item.parentId}')">
+              <div class="matrix-task-checkbox ${item.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleSubtaskComplete('${item.parentId}', '${item.id}')">
+                ${item.completed ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+              </div>
+              <span class="matrix-task-content">
+                <span style="color: var(--text-muted); font-size: 10px;">[子]</span> ${escapeHtml(item.content)}
+              </span>
+              <span class="matrix-task-date">${item.dueDate ? formatDateLocale(item.dueDate) : ''}</span>
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
+    function renderCalendar() {
+      const year = state.currentMonth.getFullYear();
+      const month = state.currentMonth.getMonth();
+
+      document.getElementById('calendarTitle').textContent = `${year}年${month + 1}月`;
+
+      const daysInMonth = getDaysInMonth(year, month);
+      const firstDay = getFirstDayOfMonth(year, month);
+
+      const daysContainer = document.getElementById('calendarDays');
+      daysContainer.innerHTML = '';
+
+      const today = new Date();
+
+      // Previous month days
+      const prevMonth = month === 0 ? 11 : month - 1;
+      const prevYear = month === 0 ? year - 1 : year;
+      const daysInPrevMonth = getDaysInMonth(prevYear, prevMonth);
+
+      for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        const dayStr = formatDate(new Date(prevYear, prevMonth, day));
+        daysContainer.appendChild(createDayElement(day, dayStr, true, today));
+      }
+
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayStr = formatDate(new Date(year, month, day));
+        daysContainer.appendChild(createDayElement(day, dayStr, false, today));
+      }
+
+      // Next month days
+      const totalCells = firstDay + daysInMonth;
+      const remainingCells = totalCells > 35 ? 42 - totalCells : 35 - totalCells;
+      const nextMonth = month === 11 ? 0 : month + 1;
+      const nextYear = month === 11 ? year + 1 : year;
+
+      for (let day = 1; day <= remainingCells; day++) {
+        const dayStr = formatDate(new Date(nextYear, nextMonth, day));
+        daysContainer.appendChild(createDayElement(day, dayStr, true, today));
+      }
+    }
+
+    function createDayElement(day, dateStr, isOtherMonth, today) {
+      const div = document.createElement('div');
+      div.className = 'calendar-day';
+
+      if (isOtherMonth) {
+        div.classList.add('other-month');
+      }
+
+      const isToday = dateStr === formatDate(today);
+      if (isToday) {
+        div.classList.add('today');
+      }
+
+      const dayNumber = document.createElement('div');
+      dayNumber.className = 'day-number';
+      dayNumber.textContent = day;
+      div.appendChild(dayNumber);
+
+      const tasksForDay = state.tasks.filter(t => t.dueDate === dateStr);
+      // Also collect subtasks that have their own due date matching this day
+      const subtasksForDay = [];
+      state.tasks.forEach(task => {
+        if (task.subtasks) {
+          task.subtasks.forEach(st => {
+            if (st.dueDate && st.dueDate === dateStr && !st.completed) {
+              subtasksForDay.push({ subtask: st, parentTask: task });
+            }
+          });
+        }
+      });
+
+      if (tasksForDay.length > 0 || subtasksForDay.length > 0) {
+        const tasksContainer = document.createElement('div');
+        tasksContainer.className = 'day-tasks';
+
+        // Show main tasks (limit to leave room for subtasks)
+        const maxMainTasks = Math.max(1, 3 - Math.min(subtasksForDay.length, 2));
+        const displayTasks = tasksForDay.slice(0, maxMainTasks);
+        displayTasks.forEach(task => {
+          const taskEl = document.createElement('div');
+          taskEl.className = 'day-task-item priority-' + (task.priority || 'normal');
+
+          if (task.completed) {
+            taskEl.classList.add('completed');
+          } else if (isOverdue(task.dueDate, task.dueTime) && !isToday) {
+            taskEl.classList.add('overdue');
+          } else if (isToday || isTodayOrBefore(task.dueDate)) {
+            taskEl.classList.add('pending');
+          }
+
+          // Add checkbox for direct completion toggle
+          const checkbox = document.createElement('div');
+          checkbox.className = `day-task-checkbox ${task.completed ? 'checked' : ''}`;
+          checkbox.innerHTML = task.completed ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+          checkbox.onclick = (e) => {
+            e.stopPropagation();
+            toggleTaskComplete(task.id);
+          };
+          taskEl.appendChild(checkbox);
+
+          // Task content
+          const contentSpan = document.createElement('span');
+          contentSpan.className = 'day-task-content';
+          contentSpan.textContent = task.tag ? `${task.tag} · ${task.content}` : task.content;
+          contentSpan.onclick = (e) => {
+            e.stopPropagation();
+            openDayDetailModal(dateStr);
+          };
+          taskEl.appendChild(contentSpan);
+
+          tasksContainer.appendChild(taskEl);
+        });
+
+        // Show subtasks for this day
+        const displaySubtasks = subtasksForDay.slice(0, 2);
+        displaySubtasks.forEach(({ subtask: st, parentTask: pt }) => {
+          const stEl = document.createElement('div');
+          stEl.className = 'day-task-item subtask-day-item priority-' + (st.priority || 'normal');
+
+          const checkbox = document.createElement('div');
+          checkbox.className = 'day-task-checkbox';
+          checkbox.onclick = (e) => {
+            e.stopPropagation();
+            toggleSubtaskComplete(pt.id, st.id);
+          };
+          stEl.appendChild(checkbox);
+
+          const contentSpan = document.createElement('span');
+          contentSpan.className = 'day-task-content';
+          contentSpan.textContent = st.content;
+          contentSpan.onclick = (e) => {
+            e.stopPropagation();
+            openDayDetailModal(dateStr);
+          };
+          stEl.appendChild(contentSpan);
+
+          tasksContainer.appendChild(stEl);
+        });
+
+        const totalItems = tasksForDay.length + subtasksForDay.length;
+        if (totalItems > maxMainTasks + displaySubtasks.length) {
+          const moreEl = document.createElement('div');
+          moreEl.className = 'task-count-badge';
+          moreEl.textContent = `+${totalItems - maxMainTasks - displaySubtasks.length} 更多`;
+          tasksContainer.appendChild(moreEl);
+        }
+
+        div.appendChild(tasksContainer);
+      }
+
+      div.onclick = () => openDayDetailModal(dateStr);
+
+      return div;
+    }
+
+    function renderList() {
+      const container = document.getElementById('listView');
+      const today = formatDate(new Date());
+      const tomorrow = formatDate(new Date(Date.now() + 86400000));
+
+      const tasks = [...state.tasks];
+      const incomplete = tasks.filter(t => !t.completed);
+      const completed = tasks.filter(t => t.completed);
+
+      // Sort incomplete by due date
+      incomplete.sort((a, b) => {
+        if (a.dueDate === b.dueDate) {
+          if (a.dueTime && b.dueTime) return a.dueTime.localeCompare(b.dueTime);
+          if (a.dueTime) return -1;
+          if (b.dueTime) return 1;
+          return 0;
+        }
+        return a.dueDate.localeCompare(b.dueDate);
+      });
+
+      // Sort completed by completed date
+      completed.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
+      let html = '';
+
+      // Overdue section
+      const overdue = incomplete.filter(t => t.dueDate < today && !isToday(t.dueDate));
+      if (overdue.length > 0) {
+        html += renderListSection('已过期', overdue);
+      }
+
+      // Today section
+      const todayTasks = incomplete.filter(t => isToday(t.dueDate));
+      if (todayTasks.length > 0) {
+        html += renderListSection('今天', todayTasks);
+      }
+
+      // Tomorrow section
+      const tomorrowTasks = incomplete.filter(t => t.dueDate === tomorrow);
+      if (tomorrowTasks.length > 0) {
+        html += renderListSection('明天', tomorrowTasks);
+      }
+
+      // This week section
+      const weekEnd = formatDate(new Date(Date.now() + 7 * 86400000));
+      const thisWeek = incomplete.filter(t => t.dueDate > tomorrow && t.dueDate <= weekEnd);
+      if (thisWeek.length > 0) {
+        html += renderListSection('本周', thisWeek);
+      }
+
+      // Later section
+      const later = incomplete.filter(t => t.dueDate > weekEnd);
+      if (later.length > 0) {
+        html += renderListSection('更晚', later);
+      }
+
+      // Completed section with tag filter
+      if (completed.length > 0) {
+        // Collect unique tags from completed tasks
+        const completedTags = new Set();
+        completed.forEach(t => { if (t.tag) completedTags.add(t.tag); });
+
+        let filterHtml = '';
+        if (completedTags.size > 0) {
+          const tagsArr = [...completedTags];
+          filterHtml = `<div class="completed-tag-filter">
+            <button class="tag-filter-btn active" onclick="filterCompletedByTag(this, '')">全部</button>
+            ${tagsArr.map(tag => `<button class="tag-filter-btn" onclick="filterCompletedByTag(this, '${escapeHtml(tag)}')">${escapeHtml(tag)}</button>`).join('')}
+          </div>`;
+        }
+        html += filterHtml + `<div class="completed-tasks-container">${renderListSection('已完成', completed)}</div>`;
+      }
+
+      if (html === '') {
+        html = renderEmptyState();
+      }
+
+      // Remember subtask section visibility states before re-rendering
+      const subtaskVisibility = {};
+      container.querySelectorAll('.subtasks-section').forEach(el => {
+        subtaskVisibility[el.id] = !el.classList.contains('hidden');
+      });
+
+      container.innerHTML = html;
+
+      // Restore subtask section visibility states
+      Object.entries(subtaskVisibility).forEach(([id, wasVisible]) => {
+        const el = document.getElementById(id);
+        if (el && wasVisible) {
+          el.classList.remove('hidden');
+        }
+      });
+
+      // Bind events
+      container.querySelectorAll('.task-checkbox').forEach(el => {
+        el.onclick = () => toggleTaskComplete(el.dataset.id);
+      });
+
+      container.querySelectorAll('.subtask-checkbox').forEach(el => {
+        el.onclick = () => toggleSubtaskComplete(el.dataset.taskId, el.dataset.id);
+      });
+
+      container.querySelectorAll('.edit-btn').forEach(el => {
+        el.onclick = () => openEditModal(el.dataset.id);
+      });
+
+      container.querySelectorAll('.delete-btn').forEach(el => {
+        el.onclick = () => {
+          if (confirm('确定要删除这个任务吗？')) {
+            deleteTask(el.dataset.id);
+          }
+        };
+      });
+
+      container.querySelectorAll('.postpone-btn').forEach(el => {
+        el.onclick = () => openPostponeModal(el.dataset.id);
+      });
+
+      container.querySelectorAll('.toggle-subtasks').forEach(el => {
+        el.onclick = () => {
+          const section = el.closest('.list-task').querySelector('.subtasks-section');
+          section.classList.toggle('hidden');
+        };
+      });
+
+      container.querySelectorAll('.add-subtask-btn').forEach(el => {
+        el.onclick = () => showSubtaskInput(el.dataset.taskId);
+      });
+
+      container.querySelectorAll('.subtask-input').forEach(el => {
+        if (el.type === 'text' || el.placeholder === '添加子任务...') {
+          el.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+              e.preventDefault();
+              const row = this.closest('.subtask-input-row');
+              const dateInput = row.querySelector('.subtask-input[type="date"]');
+              addSubtask(this.dataset.taskId, this.value.trim(), dateInput ? dateInput.value : '');
+              this.value = '';
+              if (dateInput) dateInput.value = '';
+            }
+          });
+        }
+      });
+    }
+
+    function renderListSection(title, tasks) {
+      let html = `
+        <div class="list-section">
+          <div class="list-section-header">
+            <h3 class="list-section-title">${title}</h3>
+            <span class="list-section-count">${tasks.length}</span>
+          </div>
+      `;
+
+      tasks.forEach(task => {
+        html += renderListTask(task);
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderListTask(task) {
+      const today = formatDate(new Date());
+      const isOverdue = !task.completed && task.dueDate < today && !isToday(task.dueDate);
+      const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+      const totalSubtasks = task.subtasks.length;
+      const progressPercent = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+
+      let classes = 'list-task';
+      if (task.completed) classes += ' completed';
+      if (isOverdue) classes += ' overdue';
+
+      return `
+        <div class="${classes}" data-tag="${escapeHtml(task.tag || '')}">
+          <div class="task-checkbox ${task.completed ? 'checked' : ''}" data-id="${task.id}">
+            ${task.completed ? `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ` : ''}
+          </div>
+          <div class="task-main">
+            <div class="task-content-row">
+              <span class="task-content-text">${escapeHtml(task.content)}</span>
+              <div class="task-tags">
+                ${task.tag ? `<span class="task-tag category-tag">${escapeHtml(task.tag)}</span>` : ''}
+                ${task.priority ? `<span class="priority-tag ${task.priority}">${getPriorityLabel(task.priority)}</span>` : `<span class="priority-tag normal">${getPriorityLabel('normal')}</span>`}
+                ${isOverdue ? '<span class="task-tag overdue-tag">已过期</span>' : ''}
+                ${task.postponeCount > 0 ? `<span class="task-tag postpone-tag">延期 ${task.postponeCount} 次</span>` : ''}
+              </div>
+            </div>
+            ${totalSubtasks > 0 ? `
+              <div class="task-subtasks-progress">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="9 11 12 14 22 4"></polyline>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                <span>${completedSubtasks}/${totalSubtasks}</span>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                </div>
+              </div>
+            ` : ''}
+            <div class="subtasks-section hidden" id="subtasks-${task.id}">
+              ${task.subtasks.map(st => {
+                const stOverdue = !st.completed && st.dueDate && st.dueDate < today;
+                return `
+                <div class="subtask-item ${st.completed ? 'completed' : ''}">
+                  <div class="subtask-checkbox ${st.completed ? 'checked' : ''}" data-id="${st.id}" data-task-id="${task.id}">
+                    ${st.completed ? `
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    ` : ''}
+                  </div>
+                  <div class="subtask-item-main">
+                    <div class="subtask-content-row">
+                      <span class="subtask-text">${escapeHtml(st.content)}</span>
+                    </div>
+                  </div>
+                  <div class="subtask-actions">
+                    <button class="subtask-action-btn delete" title="删除" onclick="deleteSubtask('${task.id}', '${st.id}')">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              `}).join('')}
+              <div class="subtask-input-row">
+                <input type="date" class="subtask-input" style="width: 100px; font-size: 12px; padding: 6px 8px;" title="子任务到期日期">
+                <select class="subtask-input" style="width: 110px; font-size: 12px; padding: 6px 8px;">
+                  <option value="urgent-important">紧急且重要</option>
+                  <option value="urgent">紧急不重要</option>
+                  <option value="important">不紧急重要</option>
+                  <option value="normal" selected>不紧急不重要</option>
+                </select>
+                <input type="text" class="subtask-input" placeholder="添加子任务..." data-task-id="${task.id}">
+                <button class="subtask-add-btn" onclick="submitSubtask('${task.id}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="task-date-time">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>${formatDateLocale(task.dueDate)}</span>
+            ${task.dueTime ? `<span>${task.dueTime}</span>` : ''}
+          </div>
+          <div class="task-actions">
+            ${totalSubtasks > 0 ? `
+              <button class="action-btn toggle-subtasks" title="子任务">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="9 11 12 14 22 4"></polyline>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+              </button>
+            ` : `
+              <button class="action-btn add-subtask-btn" data-task-id="${task.id}" title="添加子任务">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            `}
+            <button class="action-btn postpone-btn" data-id="${task.id}" title="延期">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </button>
+            <button class="action-btn edit-btn" data-id="${task.id}" title="编辑">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="action-btn delete delete-btn" data-id="${task.id}" title="删除">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEmptyState() {
+      return `
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+          </div>
+          <h3 class="empty-title">还没有任何任务</h3>
+          <p class="empty-desc">点击上方按钮添加你的第一个待办事项吧</p>
+          <button class="btn-primary" onclick="openAddModal()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            添加第一个任务
+          </button>
+        </div>
+      `;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function getPriorityLabel(priority) {
+      const labels = {
+        'urgent-important': '紧急且重要',
+        'urgent': '紧急不重要',
+        'important': '不紧急重要',
+        'normal': '不紧急不重要'
+      };
+      return labels[priority] || '不紧急不重要';
+    }
+
+    function showSubtaskInput(taskId) {
+      const section = document.getElementById(`subtasks-${taskId}`);
+      // Only focus input, don't change visibility - toggle button controls that
+      const textInput = section.querySelector('.subtask-input[type="text"]');
+      if (textInput) {
+        textInput.focus();
+      }
+    }
+
+    // ==================== Modal Functions ====================
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = '添加新任务';
+      document.getElementById('taskId').value = '';
+      document.getElementById('taskContent').value = '';
+      document.getElementById('taskDueDate').value = '';
+      document.getElementById('taskDueTime').value = '';
+      document.getElementById('taskTag').value = '';
+
+      // Populate tag suggestions from existing tags
+      updateTagSuggestions();
+
+      // Reset priority to normal
+      const normalPriority = document.querySelector('input[name="taskPriority"][value="normal"]');
+      if (normalPriority) {
+        normalPriority.checked = true;
+      }
+      
+      // Clear modal subtasks for new task
+      state.modalSubtasks = [];
+      renderModalSubtaskList();
+
+      // Set default date to today
+      const today = new Date();
+      document.getElementById('taskDueDate').value = formatDate(today);
+      document.getElementById('taskDueDate').min = formatDate(today);
+
+      document.getElementById('taskModal').classList.remove('hidden');
+      // Scroll to top to show modal
+      window.scrollTo({top: 0, behavior: 'smooth'});
+      document.getElementById('taskContent').focus();
+    }
+
+    // Open add modal with pre-filled date (used from day detail modal)
+    function openAddModalWithDate(dateStr) {
+      document.getElementById('modalTitle').textContent = '添加新任务';
+      document.getElementById('taskId').value = '';
+      document.getElementById('taskContent').value = '';
+      document.getElementById('taskDueDate').value = dateStr;
+      document.getElementById('taskDueTime').value = '';
+      document.getElementById('taskTag').value = '';
+
+      // Populate tag suggestions from existing tags
+      updateTagSuggestions();
+      
+      // Clear modal subtasks for new task
+      state.modalSubtasks = [];
+      renderModalSubtaskList();
+
+      // Set min date to today
+      const today = new Date();
+      document.getElementById('taskDueDate').min = formatDate(today);
+
+      document.getElementById('taskModal').classList.remove('hidden');
+      // Scroll to top to show modal
+      window.scrollTo({top: 0, behavior: 'smooth'});
+      document.getElementById('taskContent').focus();
+    }
+
+    // Render subtask list in modal
+    function renderModalSubtaskList() {
+      const list = document.getElementById('modalSubtaskList');
+      if (!list) return;
+      
+      if (state.modalSubtasks.length === 0) {
+        list.innerHTML = '';
+        return;
+      }
+      
+      list.innerHTML = state.modalSubtasks.map((st, index) => `
+        <div class="modal-subtask-item">
+          <span class="modal-subtask-item-text">${escapeHtml(st.content)}</span>
+          ${st.priority ? `<span class="priority-tag ${st.priority}" style="font-size: 10px; padding: 1px 4px;">${getPriorityLabel(st.priority)}</span>` : ''}
+          ${st.dueDate ? `<span class="modal-subtask-item-date">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            ${formatDateLocale(st.dueDate)}
+          </span>` : ''}
+          <button type="button" class="modal-subtask-item-edit" onclick="editModalSubtask(${index})" title="编辑">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button type="button" class="modal-subtask-item-postpone" onclick="postponeModalSubtask(${index})" title="延期">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </button>
+          <button type="button" class="modal-subtask-item-delete" onclick="removeModalSubtask(${index})" title="删除">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // State for subtask editing
+    state.editingSubtaskIndex = -1;
+    state.editingSubtaskPriority = 'normal';
+
+    // Edit subtask in modal - open edit popup
+    function editModalSubtask(index) {
+      const st = state.modalSubtasks[index];
+      if (!st) return;
+
+      state.editingSubtaskIndex = index;
+      state.editingSubtaskPriority = st.priority || 'normal';
+
+      document.getElementById('subtaskEditContent').value = st.content || '';
+      document.getElementById('subtaskEditDate').value = st.dueDate || '';
+
+      // Highlight current priority
+      document.querySelectorAll('.subtask-edit-priority-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.priority === state.editingSubtaskPriority);
+      });
+
+      document.getElementById('subtaskEditModal').classList.remove('hidden');
+      document.getElementById('subtaskEditContent').focus();
+    }
+
+    function selectSubtaskEditPriority(priority) {
+      state.editingSubtaskPriority = priority;
+      document.querySelectorAll('.subtask-edit-priority-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.priority === priority);
+      });
+    }
+
+    function saveSubtaskEdit() {
+      const index = state.editingSubtaskIndex;
+      if (index < 0) return;
+
+      const st = state.modalSubtasks[index];
+      if (!st) return;
+
+      const newContent = document.getElementById('subtaskEditContent').value.trim();
+      if (!newContent) return;
+
+      st.content = newContent;
+      st.dueDate = document.getElementById('subtaskEditDate').value || '';
+      st.priority = state.editingSubtaskPriority;
+
+      closeSubtaskEditModal();
+      renderModalSubtaskList();
+    }
+
+    function closeSubtaskEditModal() {
+      document.getElementById('subtaskEditModal').classList.add('hidden');
+      state.editingSubtaskIndex = -1;
+    }
+
+    // State for direct subtask editing (from day detail modal)
+    state.directEditingSubtask = null; // { taskId, subtaskId }
+
+    function editSubtaskDirect(taskId, subtaskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const st = task.subtasks.find(s => s.id === subtaskId);
+      if (!st) return;
+
+      state.directEditingSubtask = { taskId, subtaskId };
+      state.editingSubtaskPriority = st.priority || 'normal';
+
+      document.getElementById('subtaskEditContent').value = st.content || '';
+      document.getElementById('subtaskEditDate').value = st.dueDate || '';
+
+      document.querySelectorAll('.subtask-edit-priority-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.priority === state.editingSubtaskPriority);
+      });
+
+      document.getElementById('subtaskEditModal').classList.remove('hidden');
+      document.getElementById('subtaskEditContent').focus();
+    }
+
+    function saveSubtaskEdit() {
+      const index = state.editingSubtaskIndex;
+      const directEdit = state.directEditingSubtask;
+
+      if (index >= 0) {
+        // Editing from modalSubtasks
+        const st = state.modalSubtasks[index];
+        if (!st) return;
+
+        const newContent = document.getElementById('subtaskEditContent').value.trim();
+        if (!newContent) return;
+
+        st.content = newContent;
+        st.dueDate = document.getElementById('subtaskEditDate').value || '';
+        st.priority = state.editingSubtaskPriority;
+
+        closeSubtaskEditModal();
+        renderModalSubtaskList();
+      } else if (directEdit) {
+        // Editing directly from day detail
+        const task = state.tasks.find(t => t.id === directEdit.taskId);
+        if (!task) return;
+        const st = task.subtasks.find(s => s.id === directEdit.subtaskId);
+        if (!st) return;
+
+        const newContent = document.getElementById('subtaskEditContent').value.trim();
+        if (!newContent) return;
+
+        st.content = newContent;
+        st.dueDate = document.getElementById('subtaskEditDate').value || '';
+        st.priority = state.editingSubtaskPriority;
+
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        closeSubtaskEditModal();
+        openDayDetailModal(state.selectedDate);
+      }
+    }
+
+    function closeSubtaskEditModal() {
+      document.getElementById('subtaskEditModal').classList.add('hidden');
+      state.editingSubtaskIndex = -1;
+      state.directEditingSubtask = null;
+    }
+
+    // State for direct subtask postponing (from day detail modal)
+    state.directPostponingSubtask = null; // { taskId, subtaskId }
+
+    function postponeSubtaskDirect(taskId, subtaskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const st = task.subtasks.find(s => s.id === subtaskId);
+      if (!st) return;
+
+      state.directPostponingSubtask = { taskId, subtaskId };
+
+      document.getElementById('subtaskPostponeName').textContent = st.content || '未命名子任务';
+      const currentDue = st.dueDate || '未设置';
+      document.getElementById('subtaskCurrentDueDate').textContent = currentDue === '未设置' ? '未设置' : formatDateLocale(st.dueDate);
+      document.getElementById('subtaskNewDueDate').value = st.dueDate || '';
+
+      document.getElementById('subtaskPostponeModal').classList.remove('hidden');
+    }
+
+    function confirmSubtaskPostpone() {
+      const index = state.postponingSubtaskIndex;
+      const directPostpone = state.directPostponingSubtask;
+
+      if (index >= 0) {
+        // Postponing from modalSubtasks
+        const st = state.modalSubtasks[index];
+        if (!st) return;
+
+        const newDate = document.getElementById('subtaskNewDueDate').value;
+        if (!newDate) return;
+
+        st.dueDate = newDate;
+        st.postponeCount = (st.postponeCount || 0) + 1;
+        closeSubtaskPostponeModal();
+        renderModalSubtaskList();
+      } else if (directPostpone) {
+        // Postponing directly from day detail
+        const task = state.tasks.find(t => t.id === directPostpone.taskId);
+        if (!task) return;
+        const st = task.subtasks.find(s => s.id === directPostpone.subtaskId);
+        if (!st) return;
+
+        const newDate = document.getElementById('subtaskNewDueDate').value;
+        if (!newDate) return;
+
+        st.dueDate = newDate;
+        st.postponeCount = (st.postponeCount || 0) + 1;
+
+        saveTasksLocal();
+        saveTaskToFirestore(task);
+        closeSubtaskPostponeModal();
+        openDayDetailModal(state.selectedDate);
+      }
+    }
+
+    function closeSubtaskPostponeModal() {
+      document.getElementById('subtaskPostponeModal').classList.add('hidden');
+      state.postponingSubtaskIndex = -1;
+      state.directPostponingSubtask = null;
+    }
+
+    // Add subtask from modal input
+    function addSubtaskFromModal() {
+      const input = document.getElementById('modalSubtaskInput');
+      const dateInput = document.getElementById('modalSubtaskDate');
+      const prioritySelect = document.getElementById('modalSubtaskPriority');
+      if (!input || !input.value.trim()) return;
+      
+      state.modalSubtasks.push({
+        id: generateId(),
+        content: input.value.trim(),
+        dueDate: dateInput ? dateInput.value : '',
+        completed: false,
+        priority: prioritySelect ? prioritySelect.value : 'normal'
+      });
+      
+      input.value = '';
+      if (dateInput) dateInput.value = '';
+      renderModalSubtaskList();
+    }
+
+    // Remove subtask from modal
+    function removeModalSubtask(index) {
+      state.modalSubtasks.splice(index, 1);
+      renderModalSubtaskList();
+    }
+
+    function openEditModal(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Close day detail modal if open to avoid z-index overlap
+      document.getElementById('dayDetailModal').classList.add('hidden');
+
+      document.getElementById('modalTitle').textContent = '编辑任务';
+      document.getElementById('taskId').value = task.id;
+      document.getElementById('taskContent').value = task.content;
+      document.getElementById('taskDueDate').value = task.dueDate;
+      document.getElementById('taskDueTime').value = task.dueTime || '';
+      document.getElementById('taskTag').value = task.tag || '';
+
+      // Populate tag suggestions from existing tags
+      updateTagSuggestions();
+
+      // Load existing priority
+      const priority = task.priority || 'normal';
+      const priorityRadio = document.querySelector(`input[name="taskPriority"][value="${priority}"]`);
+      if (priorityRadio) {
+        priorityRadio.checked = true;
+      }
+
+      // Load existing subtasks into modal subtask list
+      state.modalSubtasks = task.subtasks ? [...task.subtasks] : [];
+      renderModalSubtaskList();
+
+      const today = new Date();
+      document.getElementById('taskDueDate').min = formatDate(today);
+
+      document.getElementById('taskModal').classList.remove('hidden');
+      document.getElementById('taskContent').focus();
+    }
+
+    function closeTaskModal() {
+      document.getElementById('taskModal').classList.add('hidden');
+    }
+
+    function openPostponeModal(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Close day detail modal if open to avoid z-index overlap
+      document.getElementById('dayDetailModal').classList.add('hidden');
+
+      state.selectedTaskId = taskId;
+      document.getElementById('currentDueDate').textContent = formatDateLocale(task.dueDate);
+      document.getElementById('postponeCount').textContent = task.postponeCount;
+      document.getElementById('newDueDate').value = task.dueDate;
+
+      // Allow any future date
+      document.getElementById('newDueDate').min = formatDate(new Date());
+
+      document.getElementById('postponeModal').classList.remove('hidden');
+    }
+
+    function closePostponeModal() {
+      document.getElementById('postponeModal').classList.add('hidden');
+      state.selectedTaskId = null;
+    }
+
+    function openDayDetailModal(dateStr) {
+      state.selectedDate = dateStr;
+      const tasks = state.tasks.filter(t => t.dueDate === dateStr);
+      const date = new Date(dateStr);
+      const today = formatDate(new Date());
+      const isToday = dateStr === today;
+
+      // Also collect subtasks whose own due date matches this day (parent task may be on a different date)
+      const independentSubtasks = [];
+      state.tasks.forEach(task => {
+        if (task.subtasks) {
+          task.subtasks.forEach(st => {
+            if (st.dueDate && st.dueDate === dateStr && task.dueDate !== dateStr) {
+              independentSubtasks.push({ subtask: st, parentTask: task });
+            }
+          });
+        }
+      });
+
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      document.getElementById('dayDetailDate').textContent =
+        `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}${isToday ? ' (今天)' : ''}`;
+      const totalItemCount = tasks.length + independentSubtasks.length;
+      document.getElementById('dayDetailCount').textContent = `${totalItemCount} 个任务`;
+
+      const body = document.getElementById('dayDetailBody');
+
+      // Calculate statistics (only count subtasks that belong to this day - no dueDate or dueDate === dateStr)
+      const completedCount = tasks.filter(t => t.completed).length;
+      const incompleteCount = tasks.length - completedCount;
+      const totalSubtasks = tasks.reduce((sum, t) => sum + t.subtasks.filter(s => !s.dueDate || s.dueDate === dateStr).length, 0);
+      const completedSubtasks = tasks.reduce((sum, t) => sum + t.subtasks.filter(s => (!s.dueDate || s.dueDate === dateStr) && s.completed).length, 0);
+      const indCompletedSubtasks = independentSubtasks.filter(({ subtask: st }) => st.completed).length;
+      const indTotalSubtasks = independentSubtasks.length;
+      const allSubtasks = totalSubtasks + indTotalSubtasks;
+      const allCompletedSubtasks = completedSubtasks + indCompletedSubtasks;
+
+      if (tasks.length === 0 && independentSubtasks.length === 0) {
+        body.innerHTML = `
+          <div class="day-detail-empty">
+            <div class="day-detail-empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div>这一天还没有任务</div>
+            <button class="day-detail-add-btn" onclick="closeDayDetailModal();openAddModalWithDate('${dateStr}')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              添加任务
+            </button>
+          </div>
+        `;
+      } else {
+        let summaryHtml = `
+          <div class="day-detail-summary">
+            <div class="day-detail-stat">
+              <span class="day-detail-stat-number">${completedCount}/${tasks.length}</span>
+              <span>主任务</span>
+            </div>
+            ${allSubtasks > 0 ? `
+            <div class="day-detail-stat">
+              <span class="day-detail-stat-number" style="color: var(--accent);">${allCompletedSubtasks}/${allSubtasks}</span>
+              <span>子任务</span>
+            </div>
+            ` : ''}
+            <button class="day-detail-add-btn" onclick="closeDayDetailModal();openAddModalWithDate('${dateStr}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              添加任务
+            </button>
+          </div>
+        `;
+        body.innerHTML = summaryHtml + tasks.map(task => {
+          const daySubtasks = task.subtasks.filter(s => !s.dueDate || s.dueDate === dateStr);
+          const completedSubtasks = daySubtasks.filter(s => s.completed).length;
+          const totalSubtasks = daySubtasks.length;
+
+          return `
+            <div class="list-task ${task.completed ? 'completed' : ''}" style="margin-bottom: 12px;">
+              <div class="task-checkbox ${task.completed ? 'checked' : ''}" data-id="${task.id}" onclick="toggleTaskComplete('${task.id}')">
+                ${task.completed ? `
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                ` : ''}
+              </div>
+              <div class="task-main">
+                <div class="task-content-row">
+                  <span class="task-content-text">${escapeHtml(task.content)}</span>
+                  ${task.tag ? `<span class="task-tag category-tag">${escapeHtml(task.tag)}</span>` : ''}
+                  ${task.priority ? `<span class="priority-tag ${task.priority}">${getPriorityLabel(task.priority)}</span>` : `<span class="priority-tag normal">${getPriorityLabel('normal')}</span>`}
+                  ${task.postponeCount > 0 ? `<span class="task-tag postpone-tag">延期 ${task.postponeCount} 次</span>` : ''}
+                  ${totalSubtasks > 0 ? `<span class="task-tag subtask-count-tag">${completedSubtasks}/${totalSubtasks}</span>` : ''}
+                </div>
+                <div class="subtasks-section" id="subtasks-${task.id}" style="margin-top: 12px;">
+                  ${task.subtasks.filter(st => !st.dueDate || st.dueDate === dateStr).map(st => {
+                    const stOverdue = !st.completed && st.dueDate && st.dueDate < today;
+                    return `
+                    <div class="subtask-item ${st.completed ? 'completed' : ''}">
+                      <div class="subtask-checkbox ${st.completed ? 'checked' : ''}" onclick="toggleSubtaskComplete('${task.id}', '${st.id}')">
+                        ${st.completed ? `
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        ` : ''}
+                      </div>
+                      <div class="subtask-item-main">
+                        <div class="subtask-content-row" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                          <span class="subtask-text" style="flex: 1; min-width: 0;">${escapeHtml(st.content)}</span>
+                          <span class="subtask-meta-date" style="flex-shrink: 0; width: 70px; text-align: center;">${st.dueDate ? `<span class="subtask-due-date ${stOverdue ? 'overdue' : ''}" style="display: inline-flex; align-items: center; gap: 2px;">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                              <line x1="16" y1="2" x2="16" y2="6"></line>
+                              <line x1="8" y1="2" x2="8" y2="6"></line>
+                              <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            ${formatDateLocale(st.dueDate)}
+                          </span>` : ''}</span>
+                          <span class="subtask-meta-priority" style="flex-shrink: 0; width: 72px; text-align: center;">${st.priority ? `<span class="priority-tag ${st.priority}" style="font-size: 10px; padding: 1px 4px;">${getPriorityLabel(st.priority)}</span>` : ''}</span>
+                        </div>
+                      </div>
+                      <div class="subtask-actions">
+                        <button class="subtask-action-btn delete" title="删除" onclick="deleteSubtask('${task.id}', '${st.id}')">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  `}).join('')}
+                  <div class="subtask-input-row" style="margin-top: 8px;">
+                    <input type="date" class="subtask-input" style="width: 100px; font-size: 12px; padding: 6px 8px;" title="子任务到期日期">
+                    <select class="subtask-input" style="width: 110px; font-size: 12px; padding: 6px 8px;">
+                      <option value="urgent-important">紧急且重要</option>
+                      <option value="urgent">紧急不重要</option>
+                      <option value="important">不紧急重要</option>
+                      <option value="normal" selected>不紧急不重要</option>
+                    </select>
+                    <input type="text" class="subtask-input" placeholder="添加子任务..." onkeydown="if(event.key==='Enter' && this.value.trim()){event.preventDefault();const row=this.closest('.subtask-input-row');const d=row.querySelector('input[type=\'date\']');const p=row.querySelector('select');addSubtask('${task.id}', this.value.trim(), d?d.value:'', p?p.value:'normal');this.value='';if(d)d.value='';}">
+                    <button class="subtask-add-btn" onclick="submitSubtaskFromModal('${task.id}')">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="task-actions" style="opacity: 1;">
+                <button class="action-btn postpone-btn" onclick="openPostponeModal('${task.id}')" title="延期">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </button>
+                <button class="action-btn edit-btn" onclick="openEditModal('${task.id}')" title="编辑">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+                <button class="action-btn delete" onclick="if(confirm('确定要删除这个任务吗？')){deleteTask('${task.id}');closeDayDetailModal();}" title="删除">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Render independent subtasks (whose due date is today but parent task is on a different date)
+        if (independentSubtasks.length > 0) {
+          // Group by parent task
+          const grouped = {};
+          independentSubtasks.forEach(({ subtask: st, parentTask: pt }) => {
+            if (!grouped[pt.id]) grouped[pt.id] = { parentTask: pt, subtasks: [] };
+            grouped[pt.id].subtasks.push(st);
+          });
+
+          let subtaskHtml = '';
+          Object.values(grouped).forEach(({ parentTask: pt, subtasks: sts }) => {
+            subtaskHtml += `
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  ${escapeHtml(pt.content)}
+                </div>
+                ${sts.map(st => {
+                  const stOverdue = !st.completed && st.dueDate && st.dueDate < today;
+                  return `
+                  <div class="subtask-item ${st.completed ? 'completed' : ''}" style="margin-bottom: 4px;">
+                    <div class="subtask-checkbox ${st.completed ? 'checked' : ''}" onclick="toggleSubtaskComplete('${pt.id}', '${st.id}')">
+                      ${st.completed ? `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      ` : ''}
+                    </div>
+                    <div class="subtask-item-main">
+                      <div class="subtask-content-row" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <span class="subtask-text" style="flex: 1; min-width: 0;">${escapeHtml(st.content)}</span>
+                        <span class="subtask-meta-date" style="flex-shrink: 0; width: 70px; text-align: center;">${st.dueDate ? `<span class="subtask-due-date ${stOverdue ? 'overdue' : ''}" style="display: inline-flex; align-items: center; gap: 2px;">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                          </svg>
+                          ${formatDateLocale(st.dueDate)}
+                        </span>` : ''}</span>
+                        <span class="subtask-meta-priority" style="flex-shrink: 0; width: 72px; text-align: center;">${st.priority ? `<span class="priority-tag ${st.priority}" style="font-size: 10px; padding: 1px 4px;">${getPriorityLabel(st.priority)}</span>` : ''}</span>
+                        ${st.postponeCount > 0 ? `<span style="flex-shrink: 0; font-size: 10px; color: var(--warning);">延期 ${st.postponeCount} 次</span>` : ''}
+                      </div>
+                    </div>
+                    <div class="subtask-actions">
+                      <button class="subtask-action-btn" title="编辑" onclick="editSubtaskDirect('${pt.id}', '${st.id}'); event.stopPropagation();">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </button>
+                      <button class="subtask-action-btn" title="延期" onclick="postponeSubtaskDirect('${pt.id}', '${st.id}'); event.stopPropagation();">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>`;
+                }).join('')}
+              </div>
+            `;
+          });
+
+          body.innerHTML += `
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
+              ${subtaskHtml}
+            </div>
+          `;
+        }
+      }
+
+      document.getElementById('dayDetailModal').classList.remove('hidden');
+    }
+
+    function closeDayDetailModal() {
+      document.getElementById('dayDetailModal').classList.add('hidden');
+      state.selectedDate = null;
+    }
+
+    // ==================== Event Listeners ====================
+    document.getElementById('addTaskBtn').onclick = openAddModal;
+    document.getElementById('closeTaskModal').onclick = closeTaskModal;
+    document.getElementById('cancelTask').onclick = closeTaskModal;
+
+    document.getElementById('closePostponeModal').onclick = closePostponeModal;
+    document.getElementById('cancelPostpone').onclick = closePostponeModal;
+
+    document.getElementById('closeDayDetailModal').onclick = closeDayDetailModal;
+
+    // Modal subtask input Enter key
+    const modalSubtaskInput = document.getElementById('modalSubtaskInput');
+    if (modalSubtaskInput) {
+      modalSubtaskInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addSubtaskFromModal();
+        }
+      });
+    }
+
+    // View tabs
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        state.currentView = tab.dataset.view;
+
+        document.getElementById('calendarView').classList.toggle('hidden', state.currentView !== 'calendar');
+        document.getElementById('listView').classList.toggle('hidden', state.currentView !== 'list');
+        document.getElementById('matrixView').classList.toggle('hidden', state.currentView !== 'matrix');
+
+        render();
+      };
+    });
+
+    // Calendar navigation
+    document.getElementById('prevMonth').onclick = () => {
+      state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
+      renderCalendar();
+    };
+
+    document.getElementById('nextMonth').onclick = () => {
+      state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
+      renderCalendar();
+    };
+
+    document.getElementById('todayBtn').onclick = () => {
+      state.currentMonth = new Date();
+      renderCalendar();
+    };
+
+    // Task form
+    document.getElementById('saveTask').onclick = () => {
+      const id = document.getElementById('taskId').value;
+      const content = document.getElementById('taskContent').value.trim();
+      const dueDate = document.getElementById('taskDueDate').value;
+      const dueTime = document.getElementById('taskDueTime').value;
+
+      if (!content || !dueDate) {
+        alert('请填写任务内容和到期日期');
+        return;
+      }
+
+      // Get priority from radio buttons
+      const priorityEl = document.querySelector('input[name="taskPriority"]:checked');
+      const priority = priorityEl ? priorityEl.value : 'normal';
+
+      // Get subtasks from modal (for both new and edit)
+      const subtasks = [...state.modalSubtasks];
+
+      // Get category tag
+      const tag = document.getElementById('taskTag').value.trim();
+
+      if (id) {
+        updateTask(id, content, dueDate, dueTime, subtasks, priority, tag);
+      } else {
+        addTask(content, dueDate, dueTime, subtasks, priority, tag);
+      }
+
+      // Clear modal subtasks after saving
+      state.modalSubtasks = [];
+      closeTaskModal();
+    };
+
+    // Postpone form
+    document.getElementById('confirmPostpone').onclick = () => {
+      const newDate = document.getElementById('newDueDate').value;
+      if (!newDate) {
+        alert('请选择新的到期日期');
+        return;
+      }
+
+      postponeTask(state.selectedTaskId, newDate);
+      closePostponeModal();
+    };
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.classList.add('hidden');
+        }
+      };
+    });
+
+    // Keyboard shortcuts
+    document.onkeydown = (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+      }
+    };
+
+    // ==================== Initialize ====================
+    async function init() {
+      // Restore last scene
+      const savedScene = localStorage.getItem('todomaster_scene') || 'work';
+      state.currentScene = savedScene;
+      applySceneTheme(savedScene);
+      document.querySelectorAll('.scene-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scene === savedScene);
+      });
+
+      // Load local tasks first
+      loadTasksLocal();
+
+      // Render initial view
+      render();
+
+      // Initialize Firebase (async, won't block UI)
+      initFirebase();
+
+      // Check if opened from email link
+      setTimeout(() => checkAuthLink(), 1000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
