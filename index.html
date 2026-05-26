@@ -2723,9 +2723,15 @@
         await auth.sendSignInLinkToEmail(email, actionCodeSettings);
         localStorage.setItem('todomaster_auth_email', email);
 
-        document.getElementById('authLoginSection').classList.add('hidden');
-        document.getElementById('authSentSection').classList.remove('hidden');
-        document.getElementById('sentEmail').textContent = email;
+        // 使用 querySelector 确保能找到元素
+        const loginSection = document.querySelector('#authLoginSection');
+        const sentSection = document.querySelector('#authSentSection');
+        const sentEmailEl = document.querySelector('#sentEmail');
+        
+        if (loginSection) loginSection.classList.add('hidden');
+        if (sentSection) sentSection.classList.remove('hidden');
+        if (sentEmailEl) sentEmailEl.textContent = email;
+        
       } catch (error) {
         console.error('Send auth link failed:', error);
         alert('发送失败：' + error.message);
