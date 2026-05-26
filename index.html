@@ -3715,9 +3715,8 @@
         const tasksContainer = document.createElement('div');
         tasksContainer.className = 'day-tasks';
 
-        // Show main tasks (limit to leave room for subtasks)
-        const maxMainTasks = Math.max(1, 3 - Math.min(subtasksForDay.length, 2));
-        const displayTasks = tasksForDay.slice(0, maxMainTasks);
+        // Show main tasks (no limit)
+        const displayTasks = tasksForDay;
         displayTasks.forEach(task => {
           const taskEl = document.createElement('div');
           taskEl.className = 'day-task-item priority-' + (task.priority || 'normal');
@@ -3753,8 +3752,8 @@
           tasksContainer.appendChild(taskEl);
         });
 
-        // Show subtasks for this day
-        const displaySubtasks = subtasksForDay.slice(0, 2);
+        // Show subtasks for this day (no limit)
+        const displaySubtasks = subtasksForDay;
         displaySubtasks.forEach(({ subtask: st, parentTask: pt }) => {
           const stEl = document.createElement('div');
           stEl.className = 'day-task-item subtask-day-item priority-' + (st.priority || 'normal');
@@ -3779,13 +3778,7 @@
           tasksContainer.appendChild(stEl);
         });
 
-        const totalItems = tasksForDay.length + subtasksForDay.length;
-        if (totalItems > maxMainTasks + displaySubtasks.length) {
-          const moreEl = document.createElement('div');
-          moreEl.className = 'task-count-badge';
-          moreEl.textContent = `+${totalItems - maxMainTasks - displaySubtasks.length} 更多`;
-          tasksContainer.appendChild(moreEl);
-        }
+        // No more badge needed since we show all tasks
 
         div.appendChild(tasksContainer);
       }
