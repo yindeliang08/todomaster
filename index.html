@@ -133,6 +133,8 @@
     .header-sync-row {
       display: flex;
       justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
       padding: 4px 0;
       border-bottom: 1px solid var(--border-light);
     }
@@ -140,6 +142,14 @@
     .header-sync-row .sync-status {
       font-size: 11px;
       padding: 3px 8px;
+    }
+
+    .sync-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
     }
 
     .header-inner {
@@ -2108,6 +2118,13 @@
     <div class="container">
       <!-- 同步状态/登录按钮 - 独立一行，始终可见 -->
       <div class="header-sync-row">
+        <div class="sync-time" id="syncTime">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span id="syncTimeText">同步时间：--</span>
+        </div>
         <div class="sync-status" id="syncStatus" onclick="openAuthModal()" style="cursor: pointer;" title="点击登录账号">
           <span class="sync-dot"></span>
           <span id="syncText">初始化中...</span>
@@ -2552,35 +2569,10 @@
   <div class="modal-overlay hidden" id="authModal">
     <div class="modal" style="max-width: 400px;">
       <div class="modal-header">
-        <h3 class="modal-title">账号登录</h3>
-        <button class="modal-close" onclick="closeAuthModal()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <h3 class="modal-title" id="authModalTitle">账号登录</h3>
       </div>
-      <div class="modal-body">
-        <div id="authLoginSection">
-          <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱，点击发送登录链接。打开邮件中的链接即可完成登录，无需密码。</p>
-          <div class="form-group">
-            <label class="form-label required">邮箱地址</label>
-            <input type="email" class="form-input" id="authEmail" placeholder="your@email.com">
-          </div>
-        </div>
-        <div id="authSentSection" class="hidden" style="text-align: center; padding: 20px 0;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
-            <path d="M22 2L11 13"></path>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
-          </svg>
-          <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录链接已发送</p>
-          <p style="color: var(--text-secondary); font-size: 13px;">请检查邮箱 <strong id="sentEmail"></strong>，点击邮件中的链接完成登录。</p>
-          <p style="color: var(--text-muted); font-size: 12px; margin-top: 12px;">登录成功后页面会自动刷新</p>
-        </div>
-      </div>
-      <div class="modal-footer" id="authFooter">
-        <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
-        <button class="btn-save" id="sendAuthLinkBtn" onclick="sendAuthLink()">发送登录链接</button>
+      <div class="modal-body" id="authModalBody">
+        <!-- 内容由 JS 动态填充 -->
       </div>
     </div>
   </div>
@@ -2626,13 +2618,80 @@
     }
 
     // ==================== Auth Functions ====================
+    // Save last sync time
+    function saveLastSyncTime() {
+      const now = new Date();
+      const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                      now.getMinutes().toString().padStart(2, '0');
+      localStorage.setItem('todomaster_last_sync', timeStr);
+      updateSyncTimeDisplay(timeStr);
+    }
+
+    function updateSyncTimeDisplay(timeStr) {
+      const el = document.getElementById('syncTimeText');
+      if (el) {
+        el.textContent = '同步时间：' + (timeStr || '--');
+      }
+    }
+
+    function loadLastSyncTime() {
+      const saved = localStorage.getItem('todomaster_last_sync');
+      updateSyncTimeDisplay(saved);
+    }
+
     function openAuthModal() {
-      document.getElementById('authLoginSection').classList.remove('hidden');
-      document.getElementById('authSentSection').classList.add('hidden');
-      document.getElementById('authFooter').classList.remove('hidden');
-      document.getElementById('authEmail').value = '';
-      document.getElementById('authModal').classList.remove('hidden');
-      document.getElementById('authEmail').focus();
+      const modal = document.getElementById('authModal');
+      const title = document.getElementById('authModalTitle');
+      const body = document.getElementById('authModalBody');
+      
+      if (auth && currentUser && currentUser.email) {
+        // 已有登录记录，显示已登录状态
+        title.textContent = '账号信息';
+        body.innerHTML = `
+          <div style="text-align: center; padding: 20px 0;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">已登录账号</p>
+            <p style="color: var(--primary); font-size: 14px;">${currentUser.email}</p>
+          </div>
+        `;
+      } else {
+        // 无登录记录，显示登录流程
+        title.textContent = '账号登录';
+        body.innerHTML = `
+          <div id="authLoginSection">
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱，点击发送登录链接。打开邮件中的链接即可完成登录，无需密码。</p>
+            <div class="form-group">
+              <label class="form-label required">邮箱地址</label>
+              <input type="email" class="form-input" id="authEmail" placeholder="your@email.com">
+            </div>
+            <div class="modal-footer" style="margin-top: 20px; padding: 0;">
+              <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
+              <button class="btn-save" id="sendAuthLinkBtn" onclick="sendAuthLink()">发送登录链接</button>
+            </div>
+          </div>
+          <div id="authSentSection" class="hidden" style="text-align: center; padding: 20px 0;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
+              <path d="M22 2L11 13"></path>
+              <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+            </svg>
+            <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录链接已发送</p>
+            <p style="color: var(--text-secondary); font-size: 13px;">请检查邮箱 <strong id="sentEmail"></strong>，点击邮件中的链接完成登录。</p>
+          </div>
+          <div id="authSuccessSection" class="hidden" style="text-align: center; padding: 20px 0;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录成功！</p>
+            <p style="color: var(--primary); font-size: 14px;" id="loggedInEmail"></p>
+          </div>
+        `;
+      }
+      
+      modal.classList.remove('hidden');
     }
 
     function closeAuthModal() {
@@ -2666,8 +2725,6 @@
 
         document.getElementById('authLoginSection').classList.add('hidden');
         document.getElementById('authSentSection').classList.remove('hidden');
-        document.getElementById('authFooter').classList.add('hidden');
-        document.getElementById('authFooter').classList.remove('hidden');
         document.getElementById('sentEmail').textContent = email;
       } catch (error) {
         console.error('Send auth link failed:', error);
@@ -2832,6 +2889,7 @@
             console.log('Firebase authenticated:', user.uid, user.email || '(anonymous)');
             updateSyncStatus('synced', user.email ? user.email : '已同步');
             await listenToTasks();
+            saveLastSyncTime();
           } else {
             // Sign in anonymously
             try {
@@ -2893,6 +2951,7 @@
         // 保持用户登录状态显示（邮箱或"未登录"），不覆盖为"已同步"
         const displayText = currentUser && currentUser.email ? currentUser.email : (currentUser ? '未登录' : '已同步');
         updateSyncStatus('synced', displayText);
+        saveLastSyncTime();
       }, (error) => {
         console.error('Listen failed:', error);
         updateSyncStatus('error', '同步错误');
@@ -4830,8 +4889,16 @@
       // Initialize Firebase and wait for it to complete before checking auth link
       await initFirebase();
 
+      // Load last sync time
+      loadLastSyncTime();
+
       // Check if opened from email link (after Firebase is ready)
       checkAuthLink();
+
+      // Open auth modal on first load
+      setTimeout(() => {
+        openAuthModal();
+      }, 500);
     }
 
     init();
