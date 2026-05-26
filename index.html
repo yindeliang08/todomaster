@@ -2653,17 +2653,26 @@
     }
 
     async function checkAuthLink() {
-      if (auth && auth.isSignInWithEmailLink(window.location.href)) {
+      // 检查当前 URL 是否是邮箱登录链接
+      if (!auth) return;
+      
+      try {
+        const isSignInLink = await auth.isSignInWithEmailLink(window.location.href);
+        if (!isSignInLink) return;
+        
+        console.log('Detected email sign-in link');
+        
         // 检测到是邮箱登录链接
         const email = localStorage.getItem('todomaster_auth_email');
         
-        // 打开登录弹窗，根据是否有存储的邮箱显示不同内容
+        // 打开登录弹窗
         document.getElementById('authModal').classList.remove('hidden');
         
         if (email) {
           // 有存储的邮箱，自动完成登录
           document.getElementById('authLoginSection').classList.remove('hidden');
           document.getElementById('authSentSection').classList.add('hidden');
+          document.getElementById('authFooter').classList.remove('hidden');
           document.getElementById('authEmail').value = email;
           
           try {
@@ -2672,6 +2681,7 @@
             localStorage.removeItem('todomaster_auth_email');
             updateSyncStatus('synced', result.user.email || '已登录');
             closeAuthModal();
+            // 清理 URL
             window.history.replaceState({}, document.title, window.location.pathname);
           } catch (error) {
             console.error('Sign in with link failed:', error);
@@ -2687,49 +2697,52 @@
           document.getElementById('authFooter').classList.add('hidden'); // 隐藏发送按钮
           document.getElementById('authEmail').focus();
           
-          // 添加提示文字
-          const hint = document.createElement('p');
-          hint.id = 'authLinkHint';
-          hint.style.cssText = 'color: var(--warning); font-size: 13px; margin-bottom: 12px; text-align: center;';
-          hint.textContent = '📧 请输入发送登录链接的邮箱地址';
-          
-          // 添加确认登录按钮
-          const confirmBtn = document.createElement('button');
-          confirmBtn.className = 'btn-save';
-          confirmBtn.style.cssText = 'width: 100%; margin-top: 12px;';
-          confirmBtn.textContent = '确认登录';
-          confirmBtn.onclick = async () => {
-            const inputEmail = document.getElementById('authEmail').value.trim();
-            if (!inputEmail) {
-              alert('请输入邮箱地址');
-              return;
-            }
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = '登录中...';
+          // 添加提示文字（如果还没有）
+          if (!document.getElementById('authLinkHint')) {
+            const hint = document.createElement('p');
+            hint.id = 'authLinkHint';
+            hint.style.cssText = 'color: var(--warning); font-size: 13px; margin-bottom: 12px; text-align: center;';
+            hint.textContent = '📧 请输入发送登录链接的邮箱地址';
             
-            try {
-              updateSyncStatus('syncing', '登录中...');
-              const result = await auth.signInWithEmailLink(inputEmail, window.location.href);
-              updateSyncStatus('synced', result.user.email || '已登录');
-              closeAuthModal();
-              window.history.replaceState({}, document.title, window.location.pathname);
-            } catch (error) {
-              console.error('Sign in with link failed:', error);
-              alert('登录失败：' + error.message);
-              confirmBtn.disabled = false;
-              confirmBtn.textContent = '确认登录';
-              updateSyncStatus('error', '登录失败');
-            }
-          };
-          
-          // 插入到 authEmail input 后面
-          const loginSection = document.getElementById('authLoginSection');
-          loginSection.appendChild(hint);
-          loginSection.appendChild(confirmBtn);
+            // 添加确认登录按钮
+            const confirmBtn = document.createElement('button');
+            confirmBtn.id = 'authConfirmBtn';
+            confirmBtn.className = 'btn-save';
+            confirmBtn.style.cssText = 'width: 100%; margin-top: 12px;';
+            confirmBtn.textContent = '确认登录';
+            confirmBtn.onclick = async () => {
+              const inputEmail = document.getElementById('authEmail').value.trim();
+              if (!inputEmail) {
+                alert('请输入邮箱地址');
+                return;
+              }
+              confirmBtn.disabled = true;
+              confirmBtn.textContent = '登录中...';
+              
+              try {
+                updateSyncStatus('syncing', '登录中...');
+                const result = await auth.signInWithEmailLink(inputEmail, window.location.href);
+                updateSyncStatus('synced', result.user.email || '已登录');
+                closeAuthModal();
+                // 清理 URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+              } catch (error) {
+                console.error('Sign in with link failed:', error);
+                alert('登录失败：' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '确认登录';
+                updateSyncStatus('error', '登录失败');
+              }
+            };
+            
+            // 插入到 authEmail input 后面
+            const loginSection = document.getElementById('authLoginSection');
+            loginSection.appendChild(hint);
+            loginSection.appendChild(confirmBtn);
+          }
         }
-        
-        // 清理 URL
-        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error) {
+        console.error('Check auth link error:', error);
       }
     }
 
@@ -2834,7 +2847,9 @@
         }
 
         render();
-        updateSyncStatus('synced', '已同步');
+        // 保持用户登录状态显示（邮箱或"未登录"），不覆盖为"已同步"
+        const displayText = currentUser && currentUser.email ? currentUser.email : (currentUser ? '未登录' : '已同步');
+        updateSyncStatus('synced', displayText);
       }, (error) => {
         console.error('Listen failed:', error);
         updateSyncStatus('error', '同步错误');
