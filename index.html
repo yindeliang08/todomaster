@@ -2734,7 +2734,22 @@
         
       } catch (error) {
         console.error('Send auth link failed:', error);
-        alert('发送失败：' + error.message);
+        
+        // 显示错误在弹窗中（便于手机调试）
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'authErrorMsg';
+        errorDiv.style.cssText = 'color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: var(--danger-light); border-radius: 4px;';
+        errorDiv.textContent = '发送失败：' + error.message + ' (代码: ' + error.code + ')';
+        
+        // 如果已存在错误提示则更新
+        const existingError = document.getElementById('authErrorMsg');
+        if (existingError) {
+          existingError.textContent = errorDiv.textContent;
+        } else {
+          const loginSection = document.querySelector('#authLoginSection');
+          if (loginSection) loginSection.appendChild(errorDiv);
+        }
+        
         btn.disabled = false;
         btn.textContent = '发送登录链接';
       }
