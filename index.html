@@ -130,6 +130,18 @@
       z-index: 100;
     }
 
+    .header-sync-row {
+      display: flex;
+      justify-content: flex-end;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .header-sync-row .sync-status {
+      font-size: 11px;
+      padding: 3px 8px;
+    }
+
     .header-inner {
       display: flex;
       align-items: center;
@@ -205,6 +217,15 @@
 
     /* Mobile Responsive Header */
     @media (max-width: 768px) {
+      .header-sync-row {
+        justify-content: center;
+      }
+
+      .header-sync-row .sync-status {
+        font-size: 12px;
+        padding: 4px 10px;
+      }
+
       .header-inner {
         flex-wrap: wrap;
         height: auto;
@@ -2084,14 +2105,24 @@
   </div>
 
   <header class="header">
-    <div class="container header-inner">
-      <div class="logo">
-        <div class="logo-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
-          </svg>
+    <div class="container">
+      <!-- 同步状态/登录按钮 - 独立一行，始终可见 -->
+      <div class="header-sync-row">
+        <div class="sync-status" id="syncStatus" onclick="openAuthModal()" style="cursor: pointer;" title="点击登录账号">
+          <span class="sync-dot"></span>
+          <span id="syncText">初始化中...</span>
         </div>
-        <span>TodoMaster</span>
+      </div>
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+          </div>
+          <span>TodoMaster</span>
+        </div>
+        <!-- 场景切换按钮 -->
         <div class="scene-switcher">
           <button class="scene-btn active" data-scene="work" onclick="switchScene('work')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2108,15 +2139,9 @@
             生活
           </button>
         </div>
-      </div>
-      <div class="header-actions">
-        <!-- Sync Status -->
-        <div class="sync-status" id="syncStatus" onclick="openAuthModal()" style="cursor: pointer;" title="点击登录账号">
-          <span class="sync-dot"></span>
-          <span id="syncText">初始化中...</span>
-        </div>
-
-        <div class="view-tabs">
+        <div class="header-actions">
+          <!-- 移除 sync-status，因为已经在上面的 header-sync-row 中 -->
+          <div class="view-tabs">
           <button class="view-tab active" data-view="calendar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -2656,11 +2681,20 @@
       // 检查当前 URL 是否是邮箱登录链接
       if (!auth) return;
       
+      // 防止重复调用：如果已经处理过登录链接，直接返回
+      if (sessionStorage.getItem('todomaster_auth_link_processed')) {
+        console.log('Auth link already processed in this session');
+        return;
+      }
+      
       try {
         const isSignInLink = await auth.isSignInWithEmailLink(window.location.href);
         if (!isSignInLink) return;
         
         console.log('Detected email sign-in link');
+        
+        // 标记正在处理登录链接
+        sessionStorage.setItem('todomaster_auth_link_processing', 'true');
         
         // 检测到是邮箱登录链接
         const email = localStorage.getItem('todomaster_auth_email');
@@ -2679,6 +2713,7 @@
             updateSyncStatus('syncing', '登录中...');
             const result = await auth.signInWithEmailLink(email, window.location.href);
             localStorage.removeItem('todomaster_auth_email');
+            sessionStorage.setItem('todomaster_auth_link_processed', 'true');
             updateSyncStatus('synced', result.user.email || '已登录');
             closeAuthModal();
             // 清理 URL
@@ -2689,6 +2724,8 @@
             updateSyncStatus('error', '登录失败');
             // 清理 URL
             window.history.replaceState({}, document.title, window.location.pathname);
+          } finally {
+            sessionStorage.removeItem('todomaster_auth_link_processing');
           }
         } else {
           // 没有存储的邮箱，让用户输入
@@ -2697,7 +2734,7 @@
           document.getElementById('authFooter').classList.add('hidden'); // 隐藏发送按钮
           document.getElementById('authEmail').focus();
           
-          // 添加提示文字（如果还没有）
+          // 添加提示文字和确认按钮（只在不存在时添加）
           if (!document.getElementById('authLinkHint')) {
             const hint = document.createElement('p');
             hint.id = 'authLinkHint';
@@ -2716,12 +2753,16 @@
                 alert('请输入邮箱地址');
                 return;
               }
+              
+              // 防止重复点击
+              if (confirmBtn.disabled) return;
               confirmBtn.disabled = true;
               confirmBtn.textContent = '登录中...';
               
               try {
                 updateSyncStatus('syncing', '登录中...');
                 const result = await auth.signInWithEmailLink(inputEmail, window.location.href);
+                sessionStorage.setItem('todomaster_auth_link_processed', 'true');
                 updateSyncStatus('synced', result.user.email || '已登录');
                 closeAuthModal();
                 // 清理 URL
@@ -2743,6 +2784,8 @@
         }
       } catch (error) {
         console.error('Check auth link error:', error);
+      } finally {
+        sessionStorage.removeItem('todomaster_auth_link_processing');
       }
     }
 
@@ -4784,11 +4827,11 @@
       // Render initial view
       render();
 
-      // Initialize Firebase (async, won't block UI)
-      initFirebase();
+      // Initialize Firebase and wait for it to complete before checking auth link
+      await initFirebase();
 
-      // Check if opened from email link
-      setTimeout(() => checkAuthLink(), 1000);
+      // Check if opened from email link (after Firebase is ready)
+      checkAuthLink();
     }
 
     init();
