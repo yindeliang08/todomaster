@@ -3586,6 +3586,17 @@
         }
       });
       
+      // Sort items in each quadrant by dueDate (ascending - nearest first)
+      Object.keys(items).forEach(key => {
+        items[key].sort((a, b) => {
+          // Handle cases where dueDate might be null/undefined
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;  // Items without dueDate go to the end
+          if (!b.dueDate) return -1; // Items without dueDate go to the end
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        });
+      });
+      
       // Update counts (tasks + subtasks)
       document.getElementById('quadrant1Count').textContent = items['urgent-important'].length;
       document.getElementById('quadrant2Count').textContent = items['urgent'].length;
