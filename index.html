@@ -2720,7 +2720,7 @@
     // Initialize Supabase
     async function initSupabase() {
       try {
-        supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         // Check existing session
         const { data: { session } } = await supabase.auth.getSession();
