@@ -2819,7 +2819,11 @@
         
         if (data && data.length > 0) {
           console.log('loadTasksFromSupabase: Loaded', data.length, 'tasks');
-          state.tasks = data;
+          // 转换字段名：title -> content
+          state.tasks = data.map(task => ({
+            ...task,
+            content: task.content || task.title || ''
+          }));
           saveTasksLocal();
         } else {
           console.log('loadTasksFromSupabase: No tasks found');
