@@ -2526,7 +2526,7 @@
     const SUPABASE_URL = 'https://nmxlhbesuyweerfpwqhm.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5teGxoYmVzdXl3ZWVyZnB3cWhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MjI3NTksImV4cCI6MjA5NTM5ODc1OX0.EmlK44Ti-PjH__wI6_CGuql9anSwexUDQF4bwM_j2v4';
 
-    let supabase = null;
+    let supabaseClient = null;
     let currentUser = null;
     let tasksChannel = null;
 
@@ -2562,9 +2562,9 @@
       const title = document.getElementById('authModalTitle');
       const body = document.getElementById('authModalBody');
       
-      if (supabase) {
+      if (supabaseClient) {
         // 检查是否已登录
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
           if (session && session.user) {
             title.textContent = '账号信息';
             body.innerHTML = `
@@ -2614,7 +2614,7 @@
         return;
       }
 
-      if (!supabase) {
+      if (!supabaseClient) {
         alert('系统未初始化');
         return;
       }
@@ -2624,7 +2624,7 @@
       btn.textContent = '发送中...';
 
       try {
-        const { error } = await supabase.auth.signInWithOtp({
+        const { error } = await supabaseClient.auth.signInWithOtp({
           email: email,
           options: {
             emailRedirectTo: window.location.origin + '/'
@@ -2704,9 +2704,9 @@
     }
 
     async function signOut() {
-      if (!supabase) return;
+      if (!supabaseClient) return;
       try {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         currentUser = null;
         state.tasks = [];
         render();
@@ -2720,10 +2720,10 @@
     // Initialize Supabase
     async function initSupabase() {
       try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         // Check existing session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
           currentUser = session.user;
           updateSyncStatus('synced', currentUser.phone || '已登录');
@@ -2733,7 +2733,7 @@
         }
         
         // Listen to auth changes
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
           if (session) {
             currentUser = session.user;
             updateSyncStatus('synced', currentUser.phone || '已登录');
@@ -2753,12 +2753,12 @@
     }
 
     async function loadTasksFromSupabase() {
-      if (!supabase || !currentUser) return;
+      if (!supabaseClient || !currentUser) return;
       
       try {
         updateSyncStatus('syncing', '同步中...');
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('tasks_' + state.currentScene)
           .select('*')
           .eq('user_id', currentUser.id);
@@ -2823,7 +2823,7 @@
       loadTasksLocal();
       
       // Re-setup Supabase data load for new scene
-      if (supabase) {
+      if (supabaseClient) {
         loadTasksFromSupabase();
       }
       
@@ -2891,9 +2891,9 @@
 
     // ==================== Supabase Operations ====================
     async function saveTaskToSupabase(task) {
-      if (!supabase || !currentUser) return;
+      if (!supabaseClient || !currentUser) return;
       try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('tasks_' + state.currentScene)
           .upsert({
             id: task.id,
@@ -2907,9 +2907,9 @@
     }
 
     async function deleteTaskFromSupabase(taskId) {
-      if (!supabase || !currentUser) return;
+      if (!supabaseClient || !currentUser) return;
       try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('tasks_' + state.currentScene)
           .delete()
           .eq('id', taskId)
