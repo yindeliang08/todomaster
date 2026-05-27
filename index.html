@@ -2774,6 +2774,10 @@
             console.log('currentUser set:', currentUser.id, currentUser.email);
             updateSyncStatus('synced', currentUser.email || '已登录');
             await loadTasksFromSupabase();
+            // 检查是否有本地数据需要迁移
+            if (event === 'SIGNED_IN') {
+              await checkAndMigrateData(currentUser);
+            }
           } else {
             addDebugLog('用户登出');
             currentUser = null;
@@ -2992,14 +2996,17 @@
     async function deleteTaskFromSupabase(taskId) {
       if (!supabaseClient || !currentUser) return;
       try {
-        const { error } = await supabaseClient
+        addDebugLog('删除任务: ' + taskId + ', 场景: ' + state.currentScene);
+        const { data, error } = await supabaseClient
           .from('tasks_' + state.currentScene)
           .delete()
           .eq('id', taskId)
           .eq('user_id', currentUser.id);
+        addDebugLog('删除结果: ' + (error ? '错误 - ' + error.message : '成功'));
         if (error) throw error;
       } catch (error) {
         console.error('Failed to delete from Supabase:', error);
+        addDebugLog('删除异常: ' + error.message);
       }
     }
 
