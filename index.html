@@ -2665,7 +2665,10 @@
             <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入手机号，点击发送验证码。验证码将发送到您的手机。</p>
             <div class="form-group">
               <label class="form-label required">手机号</label>
-              <input type="tel" class="form-input" id="phoneNumber" placeholder="+86 13800138000" maxlength="13">
+              <div style="position: relative;">
+                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px;">+86</span>
+                <input type="tel" class="form-input" id="phoneNumber" placeholder="13800138000" maxlength="11" style="padding-left: 42px;">
+              </div>
             </div>
             <div class="modal-footer" style="margin-top: 20px; padding: 0;">
               <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
