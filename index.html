@@ -2762,6 +2762,35 @@
           updateSyncStatus('synced', '未登录');
         }
         
+        // 检查 URL 中是否有登录 token（从邮件链接跳转回来）
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        
+        if (accessToken) {
+          addDebugLog('检测到 URL 中的登录 token');
+          try {
+            const { data, error } = await supabaseClient.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            if (error) throw error;
+            if (data.session) {
+              currentUser = data.session.user;
+              addDebugLog('通过 URL token 登录成功: ' + (currentUser.email || currentUser.id));
+              localStorage.setItem('todomaster_logged_in', 'true');
+              updateSyncStatus('synced', currentUser.email || '已登录');
+              await loadTasksFromSupabase();
+              await checkAndMigrateData(currentUser);
+              // 清除 URL 中的 token
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          } catch (error) {
+            addDebugLog('URL token 登录失败: ' + error.message);
+            console.error('URL token login failed:', error);
+          }
+        }
+        
         // Listen to auth changes
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
           addDebugLog('认证状态变化: ' + event);
