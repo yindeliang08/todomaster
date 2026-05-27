@@ -2771,6 +2771,23 @@
       btn.textContent = '发送中...';
 
       try {
+        // 初始化 reCAPTCHA（如果还没有）
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(btn, {
+            size: 'normal',
+            callback: (response) => {
+              // reCAPTCHA solved
+            },
+            'expired-callback': () => {
+              // Response expired
+              alert('验证码已过期，请重试');
+            }
+          });
+        }
+        
+        // 渲染 reCAPTCHA
+        await window.recaptchaVerifier.render();
+
         // 使用 Firebase 发送验证码
         confirmationResult = await auth.signInWithPhoneNumber(fullPhoneNumber, window.recaptchaVerifier);
         
@@ -2783,11 +2800,17 @@
       } catch (error) {
         console.error('Send verification code failed:', error);
         
+        // 重置 reCAPTCHA
+        if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
+          window.recaptchaVerifier = null;
+        }
+        
         // 显示错误在弹窗中
         const errorDiv = document.createElement('div');
         errorDiv.id = 'phoneErrorMsg';
         errorDiv.style.cssText = 'color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: var(--danger-light); border-radius: 4px;';
-        errorDiv.textContent = '发送失败：' + error.message + ' (代码: ' + error.code + ')';
+        errorDiv.textContent = '发送失败：' + error.message + ' (代码: ' + (error.code || 'unknown') + ')';
         
         const existingError = document.getElementById('phoneErrorMsg');
         if (existingError) {
@@ -3038,14 +3061,6 @@
 
         auth = firebase.auth();
         db = firebase.firestore();
-
-        // Initialize reCAPTCHA verifier for phone auth
-        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('sendCodeBtn', {
-          size: 'invisible',
-          callback: (response) => {
-            // reCAPTCHA solved, allow signInWithPhoneNumber.
-          }
-        });
 
         // Enable offline persistence
         await db.enablePersistence({ synchronizeTabs: true });
