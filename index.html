@@ -2954,25 +2954,38 @@
       try {
         // 构造保存的数据，确保 user_id 正确设置
         const taskData = {
-          ...task,
           id: task.id,
-          user_id: currentUser.id
+          user_id: currentUser.id,
+          title: task.content || task.title,
+          completed: task.completed || false,
+          dueDate: task.dueDate || '',
+          dueTime: task.dueTime || '',
+          priority: task.priority || 'normal',
+          tag: task.tag || '',
+          subtasks: task.subtasks || [],
+          completedAt: task.completedAt || null,
+          postponeCount: task.postponeCount || 0,
+          postponeHistory: task.postponeHistory || [],
+          createdAt: task.createdAt || Date.now()
         };
         
-        const { error } = await supabaseClient
+        addDebugLog('准备保存数据: ' + JSON.stringify(taskData).substring(0, 100));
+        console.log('saveTaskToSupabase: taskData:', taskData);
+        
+        const { data, error } = await supabaseClient
           .from('tasks_' + state.currentScene)
           .upsert(taskData);
           
-        console.log('saveTaskToSupabase: Result:', { error });
+        console.log('saveTaskToSupabase: Result:', { data, error });
+        addDebugLog('保存结果: ' + (error ? '错误 - ' + error.message : '成功'));
           
         if (error) {
-          addDebugLog('保存错误: ' + error.message);
           throw error;
         }
         addDebugLog('任务保存成功');
-        console.log('saveTaskToSupabase: Task saved successfully');
       } catch (error) {
         console.error('Failed to save to Supabase:', error);
+        addDebugLog('保存异常: ' + error.message);
       }
     }
 
