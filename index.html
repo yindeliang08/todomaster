@@ -2712,6 +2712,14 @@
       document.getElementById('authModal').classList.add('hidden');
     }
 
+    // 获取当前用户ID（测试用户使用测试号码作为ID）
+    function getCurrentUserId() {
+      if (currentUser && currentUser.isTestUser && currentUser.phoneNumber) {
+        return 'test_' + currentUser.phoneNumber.replace(/\+/g, '');
+      }
+      return currentUser ? currentUser.uid : null;
+    }
+
     // 检测并迁移本地数据到云端
     async function checkAndMigrateData(user) {
       // 检查 localStorage 中是否有旧账号的本地数据
@@ -2801,8 +2809,8 @@
             localStorage.setItem('todomaster_auth_phone', fullPhoneNumber);
             localStorage.setItem('todomaster_test_number', 'true');
             
-            // 触发数据迁移
-            checkAndMigrateData(currentUser);
+            // 触发数据迁移 - 移到 verifyCode 中
+            // checkAndMigrateData(currentUser);
             
             document.getElementById('phoneLoginSection').classList.add('hidden');
             document.getElementById('codeVerifySection').classList.remove('hidden');
@@ -2894,6 +2902,9 @@
             btn.textContent = '验证登录';
             return;
           }
+          
+          // 测试号码验证成功，触发数据迁移
+          checkAndMigrateData(currentUser);
           
           // 测试号码已经在发送验证码时完成匿名登录，这里只需要完成界面切换
           localStorage.removeItem('todomaster_test_number');
@@ -3192,7 +3203,8 @@
 
       updateSyncStatus('syncing', '同步中...');
 
-      const tasksRef = db.collection('users').doc(currentUser.uid).collection('tasks_' + state.currentScene);
+      const userId = getCurrentUserId();
+      const tasksRef = db.collection('users').doc(userId).collection('tasks_' + state.currentScene);
 
       tasksUnsubscribe = tasksRef.onSnapshot((snapshot) => {
         const cloudTasks = [];
@@ -3370,7 +3382,8 @@
       if (!db || !currentUser) return;
 
       try {
-        const tasksRef = db.collection('users').doc(currentUser.uid).collection('tasks_' + state.currentScene);
+        const userId = getCurrentUserId();
+        const tasksRef = db.collection('users').doc(userId).collection('tasks_' + state.currentScene);
         await tasksRef.doc(task.id).set(task, { merge: true });
       } catch (error) {
         console.error('Failed to save to Firestore:', error);
@@ -3381,7 +3394,8 @@
       if (!db || !currentUser) return;
 
       try {
-        const tasksRef = db.collection('users').doc(currentUser.uid).collection('tasks_' + state.currentScene);
+        const userId = getCurrentUserId();
+        const tasksRef = db.collection('users').doc(userId).collection('tasks_' + state.currentScene);
         await tasksRef.doc(taskId).delete();
       } catch (error) {
         console.error('Failed to delete from Firestore:', error);
@@ -5185,9 +5199,15 @@
       // Check if opened from email link (after Firebase is ready)
       checkAuthLink();
 
-      // Open auth modal on first load
+      // Open auth modal on first load (only if not logged in)
       setTimeout(() => {
-        openAuthModal();
+        const isLoggedIn = localStorage.getItem('todomaster_logged_in');
+        const userType = localStorage.getItem('todomaster_user_type');
+        
+        // 只有未登录时才自动弹出
+        if (!isLoggedIn && !currentUser) {
+          openAuthModal();
+        }
       }, 500);
     }
 
