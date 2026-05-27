@@ -2791,18 +2791,34 @@
         const isTestNumber = testNumbers.includes(fullPhoneNumber);
         
         if (isTestNumber) {
-          // 测试号码：跳过 reCAPTCHA 和发送验证码
-          localStorage.setItem('todomaster_auth_phone', fullPhoneNumber);
-          localStorage.setItem('todomaster_test_number', 'true');
-          
-          document.getElementById('phoneLoginSection').classList.add('hidden');
-          document.getElementById('codeVerifySection').classList.remove('hidden');
-          document.getElementById('sentPhone').textContent = fullPhoneNumber + ' (测试号码)';
-          document.getElementById('verificationCode').focus();
-          
-          btn.disabled = false;
-          btn.textContent = '发送验证码';
-          return;
+          // 测试号码：使用匿名登录
+          try {
+            const result = await auth.signInAnonymously();
+            currentUser = result.user;
+            currentUser.phoneNumber = fullPhoneNumber; // 标记为测试号码
+            currentUser.isTestUser = true;
+            
+            localStorage.setItem('todomaster_auth_phone', fullPhoneNumber);
+            localStorage.setItem('todomaster_test_number', 'true');
+            
+            // 触发数据迁移
+            checkAndMigrateData(currentUser);
+            
+            document.getElementById('phoneLoginSection').classList.add('hidden');
+            document.getElementById('codeVerifySection').classList.remove('hidden');
+            document.getElementById('sentPhone').textContent = fullPhoneNumber + ' (测试号码)';
+            document.getElementById('verificationCode').focus();
+            
+            btn.disabled = false;
+            btn.textContent = '发送验证码';
+            return;
+          } catch (error) {
+            console.error('Anonymous login failed:', error);
+            alert('登录失败：' + error.message);
+            btn.disabled = false;
+            btn.textContent = '发送验证码';
+            return;
+          }
         }
 
         // 正常号码：初始化 reCAPTCHA
@@ -2871,35 +2887,29 @@
         const isTestNumber = localStorage.getItem('todomaster_test_number') === 'true';
         
         if (isTestNumber) {
-          // 测试号码：模拟登录成功
-          const mockUser = {
-            uid: 'test-user-' + Date.now(),
-            phoneNumber: localStorage.getItem('todomaster_auth_phone'),
-            isTestUser: true
-          };
+          // 测试号码：验证码固定为 123456
+          if (code !== '123456') {
+            alert('测试号码验证码错误，正确验证码是：123456');
+            btn.disabled = false;
+            btn.textContent = '验证登录';
+            return;
+          }
           
-          // 测试号码登录成功
+          // 测试号码已经在发送验证码时完成匿名登录，这里只需要完成界面切换
           localStorage.removeItem('todomaster_test_number');
-          
-          // 触发数据迁移检测
-          checkAndMigrateData(mockUser);
-          
-          // 保存测试号码登录状态
           localStorage.setItem('todomaster_logged_in', 'true');
-          localStorage.setItem('todomaster_user_phone', mockUser.phoneNumber);
+          localStorage.setItem('todomaster_user_phone', currentUser.phoneNumber);
           localStorage.setItem('todomaster_user_type', 'test');
-          
-          // 更新状态
-          currentUser = mockUser;
-          state.tasks = [];
           
           document.getElementById('codeVerifySection').classList.add('hidden');
           document.getElementById('phoneSuccessSection').classList.remove('hidden');
-          document.getElementById('loggedInPhone').textContent = mockUser.phoneNumber + ' (测试账号)';
+          document.getElementById('loggedInPhone').textContent = currentUser.phoneNumber + ' (测试账号)';
           
-          updateSyncStatus('synced', mockUser.phoneNumber);
+          updateSyncStatus('synced', currentUser.phoneNumber);
           saveLastSyncTime();
-          render();
+          
+          // 设置 Firebase 监听
+          listenToTasks();
           
           return;
         }
@@ -5157,13 +5167,16 @@
       
       if (isLoggedIn === 'true' && userType === 'test' && userPhone) {
         // 恢复测试用户状态
-        currentUser = {
-          uid: 'test-user-' + Date.now(),
-          phoneNumber: userPhone,
-          isTestUser: true
-        };
-        updateSyncStatus('synced', userPhone);
-        loadLastSyncTime();
+        // 注意：这里需要等待 Firebase 初始化完成后再设置
+        setTimeout(() => {
+          if (auth && currentUser) {
+            currentUser.phoneNumber = userPhone;
+            currentUser.isTestUser = true;
+            updateSyncStatus('synced', userPhone);
+            loadLastSyncTime();
+            listenToTasks(); // 启动 Firebase 监听
+          }
+        }, 1000);
       }
 
       // Load last sync time
