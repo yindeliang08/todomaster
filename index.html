@@ -2581,23 +2581,29 @@
             title.textContent = '邮箱登录';
             body.innerHTML = `
               <div id="emailLoginSection">
-                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱地址，点击发送登录链接。打开邮件中的链接即可完成登录。</p>
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱地址，我们将发送 6 位验证码到您的邮箱。</p>
                 <div class="form-group">
                   <label class="form-label required">邮箱地址</label>
                   <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com">
                 </div>
                 <div class="modal-footer" style="margin-top: 20px; padding: 0;">
                   <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
-                  <button class="btn-save" id="sendLoginLinkBtn" onclick="sendLoginLink()">发送登录链接</button>
+                  <button class="btn-save" id="sendOtpBtn" onclick="sendOtpCode()">发送验证码</button>
                 </div>
               </div>
-              <div id="emailSentSection" class="hidden" style="text-align: center; padding: 20px 0;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
-                  <path d="M22 2L11 13"></path>
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
-                </svg>
-                <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录链接已发送</p>
-                <p style="color: var(--text-secondary); font-size: 13px;">请检查邮箱 <strong id="sentEmailDisplay"></strong>，点击邮件中的链接完成登录。</p>
+              <div id="otpVerifySection" class="hidden">
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">验证码已发送到 <strong id="otpEmailDisplay"></strong></p>
+                <div class="form-group">
+                  <label class="form-label required">6 位验证码</label>
+                  <input type="text" class="form-input" id="otpCode" placeholder="请输入 6 位验证码" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 8px;">
+                </div>
+                <div class="modal-footer" style="margin-top: 20px; padding: 0;">
+                  <button class="btn-cancel" onclick="backToEmailInput()">返回</button>
+                  <button class="btn-save" id="verifyOtpBtn" onclick="verifyOtpCode()">验证登录</button>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 12px; text-align: center;">
+                  没有收到？<a href="javascript:void(0)" onclick="sendOtpCode()" style="color: var(--primary);">重新发送</a>
+                </p>
               </div>
             `;
           }
@@ -2607,7 +2613,7 @@
       modal.classList.remove('hidden');
     }
 
-    async function sendLoginLink() {
+    async function sendOtpCode() {
       const email = document.getElementById('loginEmail').value.trim();
       if (!email) {
         alert('请输入邮箱地址');
@@ -2619,7 +2625,7 @@
         return;
       }
 
-      const btn = document.getElementById('sendLoginLinkBtn');
+      const btn = document.getElementById('sendOtpBtn');
       btn.disabled = true;
       btn.textContent = '发送中...';
 
@@ -2636,10 +2642,11 @@
         localStorage.setItem('todomaster_login_email', email);
 
         document.getElementById('emailLoginSection').classList.add('hidden');
-        document.getElementById('emailSentSection').classList.remove('hidden');
-        document.getElementById('sentEmailDisplay').textContent = email;
+        document.getElementById('otpVerifySection').classList.remove('hidden');
+        document.getElementById('otpEmailDisplay').textContent = email;
+        document.getElementById('otpCode').focus();
       } catch (error) {
-        console.error('Send login link failed:', error);
+        console.error('Send OTP failed:', error);
         
         const errorDiv = document.createElement('div');
         errorDiv.id = 'loginErrorMsg';
@@ -2655,7 +2662,62 @@
         }
         
         btn.disabled = false;
-        btn.textContent = '发送登录链接';
+        btn.textContent = '发送验证码';
+      }
+    }
+
+    function backToEmailInput() {
+      document.getElementById('otpVerifySection').classList.add('hidden');
+      document.getElementById('emailLoginSection').classList.remove('hidden');
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = false;
+      btn.textContent = '发送验证码';
+    }
+
+    async function verifyOtpCode() {
+      const code = document.getElementById('otpCode').value.trim();
+      if (!code || code.length !== 6) {
+        alert('请输入 6 位验证码');
+        return;
+      }
+
+      const email = localStorage.getItem('todomaster_login_email');
+      
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.disabled = true;
+      btn.textContent = '验证中...';
+
+      try {
+        const { data, error } = await supabaseClient.auth.verifyOtp({
+          email: email,
+          token: code,
+          type: 'email'
+        });
+        
+        if (error) throw error;
+        
+        localStorage.removeItem('todomaster_login_email');
+        localStorage.setItem('todomaster_logged_in', 'true');
+        
+        currentUser = data.user;
+        addDebugLog('验证码登录成功: ' + (currentUser.email || currentUser.id));
+        
+        updateSyncStatus('synced', currentUser.email || '已同步');
+        saveLastSyncTime();
+        
+        // 触发数据迁移
+        await checkAndMigrateData(currentUser);
+        
+        // 加载云端数据
+        await loadTasksFromSupabase();
+        
+        // 更新弹窗显示已登录状态
+        openAuthModal();
+      } catch (error) {
+        console.error('Verify OTP failed:', error);
+        alert('验证失败：' + error.message);
+        btn.disabled = false;
+        btn.textContent = '验证登录';
       }
     }
 
