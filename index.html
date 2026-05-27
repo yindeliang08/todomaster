@@ -2718,27 +2718,64 @@
     }
 
     // Initialize Supabase
+    // Debug logging
+    const debugLogs = [];
+    const MAX_LOGS = 50;
+    
+    function addDebugLog(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const log = `[${timestamp}] ${message}`;
+      debugLogs.push(log);
+      if (debugLogs.length > MAX_LOGS) {
+        debugLogs.shift();
+      }
+      const debugEl = document.getElementById('debugLogs');
+      if (debugEl) {
+        debugEl.innerHTML = debugLogs.map(l => `<div style="margin-bottom: 4px; word-break: break-all;">${l}</div>`).join('');
+        debugEl.scrollTop = debugEl.scrollHeight;
+      }
+      console.log(log);
+    }
+    
+    function toggleDebugPanel() {
+      const panel = document.getElementById('debugPanel');
+      if (panel) {
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      }
+    }
+    
     async function initSupabase() {
       try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        addDebugLog('Supabase 初始化成功');
         
         // Check existing session
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
           currentUser = session.user;
+          addDebugLog('已有会话，用户: ' + (currentUser.email || currentUser.id));
           updateSyncStatus('synced', currentUser.phone || '已登录');
           await loadTasksFromSupabase();
         } else {
+          addDebugLog('无会话');
           updateSyncStatus('synced', '未登录');
         }
         
         // Listen to auth changes
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
+          addDebugLog('认证状态变化: ' + event);
+          console.log('Auth state changed:', event, session ? session.user.id : 'no session');
           if (session) {
             currentUser = session.user;
-            updateSyncStatus('synced', currentUser.phone || '已登录');
+            addDebugLog('用户登录: ' + (currentUser.email || currentUser.id));
+            localStorage.removeItem('todomaster_login_email');
+            localStorage.setItem('todomaster_logged_in', 'true');
+            console.log('currentUser set:', currentUser.id, currentUser.email);
+            updateSyncStatus('synced', currentUser.email || '已登录');
             await loadTasksFromSupabase();
           } else {
+            addDebugLog('用户登出');
             currentUser = null;
             updateSyncStatus('synced', '未登录');
           }
@@ -2753,7 +2790,13 @@
     }
 
     async function loadTasksFromSupabase() {
-      if (!supabaseClient || !currentUser) return;
+      if (!supabaseClient || !currentUser) {
+        console.log('loadTasksFromSupabase: supabaseClient or currentUser is null');
+        return;
+      }
+      
+      addDebugLog('加载任务，用户: ' + (currentUser?.id || 'unknown') + ', 场景: ' + state.currentScene);
+      console.log('loadTasksFromSupabase: Loading tasks for user:', currentUser.id, 'scene:', state.currentScene);
       
       try {
         updateSyncStatus('syncing', '同步中...');
@@ -2763,16 +2806,25 @@
           .select('*')
           .eq('user_id', currentUser.id);
           
-        if (error) throw error;
+        console.log('loadTasksFromSupabase: Result:', { data, error });
         
-        if (data && data.length > 0) {
-          state.tasks = data;
-          saveTasksLocal();
+        if (error) {
+          addDebugLog('加载错误: ' + error.message);
+          throw error;
         }
         
+        if (data && data.length > 0) {
+          console.log('loadTasksFromSupabase: Loaded', data.length, 'tasks');
+          state.tasks = data;
+          saveTasksLocal();
+        } else {
+          console.log('loadTasksFromSupabase: No tasks found');
+        }
+        
+        addDebugLog('加载到 ' + (data?.length || 0) + ' 个任务');
         render();
         saveLastSyncTime();
-        updateSyncStatus('synced', currentUser.phone || '已同步');
+        updateSyncStatus('synced', currentUser.email || '已同步');
       } catch (error) {
         console.error('Load from Supabase failed:', error);
         updateSyncStatus('error', '同步失败');
@@ -2891,7 +2943,14 @@
 
     // ==================== Supabase Operations ====================
     async function saveTaskToSupabase(task) {
-      if (!supabaseClient || !currentUser) return;
+      if (!supabaseClient || !currentUser) {
+        console.log('saveTaskToSupabase: supabaseClient or currentUser is null');
+        return;
+      }
+      
+      addDebugLog('保存任务: ' + task.id + ', 场景: ' + state.currentScene);
+      console.log('saveTaskToSupabase: Saving task:', task.id, 'for user:', currentUser.id, 'scene:', state.currentScene);
+      
       try {
         const { error } = await supabaseClient
           .from('tasks_' + state.currentScene)
@@ -2900,7 +2959,15 @@
             user_id: currentUser.id,
             ...task
           });
-        if (error) throw error;
+          
+        console.log('saveTaskToSupabase: Result:', { error });
+          
+        if (error) {
+          addDebugLog('保存错误: ' + error.message);
+          throw error;
+        }
+        addDebugLog('任务保存成功');
+        console.log('saveTaskToSupabase: Task saved successfully');
       } catch (error) {
         console.error('Failed to save to Supabase:', error);
       }
@@ -4695,6 +4762,25 @@
     }
 
     init();
+  </script>
+  
+  <!-- Debug Panel -->
+  <div id="debugPanel" style="position: fixed; bottom: 10px; left: 10px; right: 10px; max-height: 200px; background: rgba(0,0,0,0.9); color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 8px; overflow-y: auto; z-index: 9999; display: none;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+      <strong style="color: #fff;">调试日志</strong>
+      <button onclick="document.getElementById('debugPanel').style.display='none'" style="background: #666; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">关闭</button>
+    </div>
+    <div id="debugLogs"></div>
+  </div>
+  
+  <!-- Debug toggle button -->
+  <button id="debugToggle" onclick="toggleDebugPanel()" style="position: fixed; bottom: 10px; right: 10px; background: #666; color: #fff; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; z-index: 9998; cursor: pointer; opacity: 0.7;">调试</button>
+  
+  <script>
+    // Debug logging
+    const debugLogs = [];
+    const MAX_LOGS = 50;
+    
   </script>
 </body>
 </html>
