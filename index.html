@@ -57,7 +57,7 @@
       padding: 0 24px;
     }
 
-    /* Firebase Setup Banner */
+    /* Supabase Setup Banner */
     .setup-banner {
       background: linear-gradient(135deg, #fef3c7, #fde68a);
       border-bottom: 1px solid #f59e0b;
@@ -1945,7 +1945,7 @@
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
 
-    /* Firebase Setup Modal */
+    /* Supabase Setup Modal */
     .setup-modal .modal {
       max-width: 600px;
     }
@@ -2096,7 +2096,7 @@
   </style>
 </head>
 <body>
-  <!-- Firebase Setup Banner -->
+  <!-- Supabase Setup Banner -->
   <div class="setup-banner" id="setupBanner">
     <div class="setup-banner-content">
       <div class="setup-banner-icon">
@@ -2107,10 +2107,10 @@
         </svg>
       </div>
       <div class="setup-banner-text">
-        <div class="setup-banner-title">需要配置 Firebase 才能启用云同步</div>
-        <div class="setup-banner-desc">配置后，你的待办事项将在手机和电脑间自动同步</div>
+        <div class="setup-banner-title">需要登录才能启用云同步</div>
+        <div class="setup-banner-desc">登录后，你的待办事项将在手机和电脑间自动同步</div>
       </div>
-      <button class="setup-banner-btn" onclick="openSetupModal()">立即配置</button>
+      <button class="setup-banner-btn" onclick="openAuthModal()">立即登录</button>
     </div>
   </div>
 
@@ -2506,65 +2506,6 @@
     </div>
   </div>
 
-  <!-- Firebase Setup Modal -->
-  <div class="modal-overlay setup-modal hidden" id="setupModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">Firebase 云同步配置</h3>
-        <button class="modal-close" onclick="closeSetupModal()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="setup-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h4>创建 Firebase 项目</h4>
-            <p>访问 <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--primary);">Firebase Console</a>，点击「添加项目」，创建一个新项目。</p>
-          </div>
-        </div>
-
-        <div class="setup-step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h4>启用匿名登录</h4>
-            <p>在项目左侧菜单选择「Authentication」→「登录方式」，启用「匿名」和「邮箱链接（无密码）」。</p>
-          </div>
-        </div>
-
-        <div class="setup-step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h4>创建 Firestore 数据库</h4>
-            <p>选择「Firestore Database」→「创建数据库」，选择「测试模式」开始使用。</p>
-          </div>
-        </div>
-
-        <div class="setup-step">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            <h4>获取配置信息</h4>
-            <p>进入「项目设置」（齿轮图标），滚动到「你的应用」，点击 Web 图标 (</>)，注册应用后复制配置代码。</p>
-            <textarea class="config-textarea" id="firebaseConfig" placeholder='粘贴你的 Firebase 配置，例如：
-{
-  "apiKey": "AIzaSy...",
-  "authDomain": "your-app.firebaseapp.com",
-  "projectId": "your-app",
-  ...
-}'></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeSetupModal()">暂不配置</button>
-        <button class="btn-save" onclick="saveFirebaseConfig()">保存并连接</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Auth Modal -->
   <div class="modal-overlay hidden" id="authModal">
     <div class="modal" style="max-width: 400px;">
@@ -2577,44 +2518,21 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <script>
-    // ==================== Firebase Configuration ====================
-    const FIREBASE_CONFIG_KEY = 'todomaster_firebase_config';
+    // ==================== Supabase Configuration ====================
+    const SUPABASE_URL = 'https://nmxlhbesuyweerfpwqhm.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5teGxoYmVzdXl3ZWVyZnB3cWhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MjI3NTksImV4cCI6MjA5NTM5ODc1OX0.EmlK44Ti-PjH__wI6_CGuql9anSwexUDQF4bwM_j2v4';
 
-    // Pre-configured Firebase settings
-    const PRESET_FIREBASE_CONFIG = {
-      apiKey: "AIzaSyCB8SurqrQLPOufK4y9hE1kWljDY9GE4Sk",
-      authDomain: "todo-list-d04e4.firebaseapp.com",
-      projectId: "todo-list-d04e4",
-      storageBucket: "todo-list-d04e4.firebasestorage.app",
-      messagingSenderId: "735195923916",
-      appId: "1:735195923916:web:ab2df8765f6d9230b68969",
-      measurementId: "G-6P6SL7VQKL"
-    };
-
-    let firebaseInitialized = false;
-    let db = null;
-    let auth = null;
+    let supabase = null;
     let currentUser = null;
-    let tasksUnsubscribe = null;
+    let tasksChannel = null;
 
-    // Check if Firebase is configured
-    function isFirebaseConfigured() {
-      const config = localStorage.getItem(FIREBASE_CONFIG_KEY);
-      return config !== null;
-    }
-
-    // Get the active Firebase config (preset or user-configured)
-    function getFirebaseConfig() {
-      if (isFirebaseConfigured()) {
-        return JSON.parse(localStorage.getItem(FIREBASE_CONFIG_KEY));
-      }
-      return PRESET_FIREBASE_CONFIG;
+    // Check if Supabase is configured (always true with preset config)
+    function isSupabaseConfigured() {
+      return true;
     }
 
     // ==================== Auth Functions ====================
@@ -2644,80 +2562,105 @@
       const title = document.getElementById('authModalTitle');
       const body = document.getElementById('authModalBody');
       
-      if (auth && currentUser && currentUser.phoneNumber) {
-        // 已有登录记录，显示已登录状态
-        title.textContent = '账号信息';
-        body.innerHTML = `
-          <div style="text-align: center; padding: 20px 0;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">已登录账号</p>
-            <p style="color: var(--primary); font-size: 14px;">${currentUser.phoneNumber}</p>
-          </div>
-        `;
-      } else {
-        // 无登录记录，显示手机号登录流程
-        title.textContent = '手机号登录';
-        body.innerHTML = `
-          <div id="phoneLoginSection">
-            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入手机号，点击发送验证码。验证码将发送到您的手机。</p>
-            <div class="form-group">
-              <label class="form-label required">手机号</label>
-              <div style="position: relative;">
-                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px;">+86</span>
-                <input type="tel" class="form-input" id="phoneNumber" placeholder="13800138000" maxlength="11" style="padding-left: 42px;">
+      if (supabase) {
+        // 检查是否已登录
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session && session.user) {
+            title.textContent = '账号信息';
+            body.innerHTML = `
+              <div style="text-align: center; padding: 20px 0;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">已登录账号</p>
+                <p style="color: var(--primary); font-size: 14px;">${session.user.email}</p>
               </div>
-            </div>
-            <div class="modal-footer" style="margin-top: 20px; padding: 0;">
-              <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
-              <button class="btn-save" id="sendCodeBtn" onclick="sendVerificationCode()">发送验证码</button>
-            </div>
-          </div>
-          <div id="codeVerifySection" class="hidden" style="text-align: center; padding: 20px 0;">
-            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">验证码已发送到 <strong id="sentPhone"></strong></p>
-            <div class="form-group">
-              <label class="form-label required">验证码</label>
-              <input type="text" class="form-input" id="verificationCode" placeholder="6位验证码" maxlength="6" style="text-align: center; letter-spacing: 8px; font-size: 18px;">
-            </div>
-            <div class="modal-footer" style="margin-top: 20px; padding: 0; justify-content: center;">
-              <button class="btn-save" id="verifyCodeBtn" onclick="verifyCode()">验证登录</button>
-            </div>
-            <p style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">
-              <a href="#" onclick="showPhoneInput()" style="color: var(--primary);">更换手机号</a>
-            </p>
-          </div>
-          <div id="phoneSuccessSection" class="hidden" style="text-align: center; padding: 20px 0;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录成功！</p>
-            <p style="color: var(--primary); font-size: 14px;" id="loggedInPhone"></p>
-          </div>
-        `;
+            `;
+          } else {
+            title.textContent = '邮箱登录';
+            body.innerHTML = `
+              <div id="emailLoginSection">
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱地址，点击发送登录链接。打开邮件中的链接即可完成登录。</p>
+                <div class="form-group">
+                  <label class="form-label required">邮箱地址</label>
+                  <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com">
+                </div>
+                <div class="modal-footer" style="margin-top: 20px; padding: 0;">
+                  <button class="btn-cancel" onclick="closeAuthModal()">取消</button>
+                  <button class="btn-save" id="sendLoginLinkBtn" onclick="sendLoginLink()">发送登录链接</button>
+                </div>
+              </div>
+              <div id="emailSentSection" class="hidden" style="text-align: center; padding: 20px 0;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" style="margin-bottom: 12px;">
+                  <path d="M22 2L11 13"></path>
+                  <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+                </svg>
+                <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">登录链接已发送</p>
+                <p style="color: var(--text-secondary); font-size: 13px;">请检查邮箱 <strong id="sentEmailDisplay"></strong>，点击邮件中的链接完成登录。</p>
+              </div>
+            `;
+          }
+        });
       }
       
       modal.classList.remove('hidden');
     }
 
-    function showPhoneInput() {
-      document.getElementById('phoneLoginSection').classList.remove('hidden');
-      document.getElementById('codeVerifySection').classList.add('hidden');
-      document.getElementById('phoneNumber').focus();
+    async function sendLoginLink() {
+      const email = document.getElementById('loginEmail').value.trim();
+      if (!email) {
+        alert('请输入邮箱地址');
+        return;
+      }
+
+      if (!supabase) {
+        alert('系统未初始化');
+        return;
+      }
+
+      const btn = document.getElementById('sendLoginLinkBtn');
+      btn.disabled = true;
+      btn.textContent = '发送中...';
+
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: email,
+          options: {
+            emailRedirectTo: window.location.origin + '/'
+          }
+        });
+        
+        if (error) throw error;
+        
+        localStorage.setItem('todomaster_login_email', email);
+
+        document.getElementById('emailLoginSection').classList.add('hidden');
+        document.getElementById('emailSentSection').classList.remove('hidden');
+        document.getElementById('sentEmailDisplay').textContent = email;
+      } catch (error) {
+        console.error('Send login link failed:', error);
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'loginErrorMsg';
+        errorDiv.style.cssText = 'color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: var(--danger-light); border-radius: 4px;';
+        errorDiv.textContent = '发送失败：' + error.message;
+        
+        const existingError = document.getElementById('loginErrorMsg');
+        if (existingError) {
+          existingError.textContent = errorDiv.textContent;
+        } else {
+          const loginSection = document.querySelector('#emailLoginSection');
+          if (loginSection) loginSection.appendChild(errorDiv);
+        }
+        
+        btn.disabled = false;
+        btn.textContent = '发送登录链接';
+      }
     }
 
     function closeAuthModal() {
       document.getElementById('authModal').classList.add('hidden');
-    }
-
-    // 获取当前用户ID（测试用户使用测试号码作为ID）
-    function getCurrentUserId() {
-      if (currentUser && currentUser.isTestUser && currentUser.phoneNumber) {
-        return 'test_' + currentUser.phoneNumber.replace(/\+/g, '');
-      }
-      return currentUser ? currentUser.uid : null;
     }
 
     // 检测并迁移本地数据到云端
@@ -2737,7 +2680,7 @@
               const currentScene = state.currentScene;
               state.currentScene = 'work';
               for (const task of tasks) {
-                await saveTaskToFirestore(task);
+                await saveTaskToSupabase(task);
               }
               state.currentScene = currentScene;
             }
@@ -2747,7 +2690,7 @@
               const currentScene = state.currentScene;
               state.currentScene = 'life';
               for (const task of tasks) {
-                await saveTaskToFirestore(task);
+                await saveTaskToSupabase(task);
               }
               state.currentScene = currentScene;
             }
@@ -2760,372 +2703,11 @@
       }
     }
 
-    let confirmationResult = null;
-
-    async function sendVerificationCode() {
-      let phoneNumber = document.getElementById('phoneNumber').value.trim();
-      if (!phoneNumber) {
-        alert('请输入手机号');
-        return;
-      }
-
-      // 清理手机号中的空格和特殊字符
-      phoneNumber = phoneNumber.replace(/\s/g, '').replace(/-/g, '');
-      
-      // 自动添加 +86 前缀
-      let fullPhoneNumber;
-      if (phoneNumber.startsWith('+')) {
-        fullPhoneNumber = phoneNumber;
-      } else if (phoneNumber.length === 11) {
-        fullPhoneNumber = '+86' + phoneNumber;
-      } else {
-        fullPhoneNumber = '+' + phoneNumber;
-      }
-
-      if (!auth) {
-        alert('Firebase 未初始化，请先配置');
-        return;
-      }
-
-      const btn = document.getElementById('sendCodeBtn');
-      btn.disabled = true;
-      btn.textContent = '发送中...';
-
-      // 测试号码列表（Firebase Console 中配置的）
-      const testNumbers = ['+8618018720801', '+8618018720802'];
-
-      try {
-        // 检查是否是测试号码
-        const isTestNumber = testNumbers.includes(fullPhoneNumber);
-        
-        if (isTestNumber) {
-          // 测试号码：使用匿名登录
-          try {
-            const result = await auth.signInAnonymously();
-            currentUser = result.user;
-            currentUser.phoneNumber = fullPhoneNumber; // 标记为测试号码
-            currentUser.isTestUser = true;
-            
-            localStorage.setItem('todomaster_auth_phone', fullPhoneNumber);
-            localStorage.setItem('todomaster_test_number', 'true');
-            
-            // 触发数据迁移 - 移到 verifyCode 中
-            // checkAndMigrateData(currentUser);
-            
-            document.getElementById('phoneLoginSection').classList.add('hidden');
-            document.getElementById('codeVerifySection').classList.remove('hidden');
-            document.getElementById('sentPhone').textContent = fullPhoneNumber + ' (测试号码)';
-            document.getElementById('verificationCode').focus();
-            
-            btn.disabled = false;
-            btn.textContent = '发送验证码';
-            return;
-          } catch (error) {
-            console.error('Anonymous login failed:', error);
-            alert('登录失败：' + error.message);
-            btn.disabled = false;
-            btn.textContent = '发送验证码';
-            return;
-          }
-        }
-
-        // 正常号码：初始化 reCAPTCHA
-        if (!window.recaptchaVerifier) {
-          window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(btn, {
-            size: 'normal',
-            callback: () => {}
-          });
-        }
-        
-        await window.recaptchaVerifier.render();
-
-        // 发送验证码
-        confirmationResult = await auth.signInWithPhoneNumber(fullPhoneNumber, window.recaptchaVerifier);
-        
-        localStorage.setItem('todomaster_auth_phone', fullPhoneNumber);
-
-        document.getElementById('phoneLoginSection').classList.add('hidden');
-        document.getElementById('codeVerifySection').classList.remove('hidden');
-        document.getElementById('sentPhone').textContent = fullPhoneNumber;
-        document.getElementById('verificationCode').focus();
-      } catch (error) {
-        console.error('Send verification code failed:', error);
-        
-        if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.clear();
-          window.recaptchaVerifier = null;
-        }
-        
-        let errorMessage = error.message;
-        if (error.code === 'auth/argument-error' || error.code === 'auth/invalid-phone-number') {
-          errorMessage = '手机号格式错误，请检查手机号是否正确';
-        }
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.id = 'phoneErrorMsg';
-        errorDiv.style.cssText = 'color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: var(--danger-light); border-radius: 4px;';
-        errorDiv.textContent = '发送失败：' + errorMessage;
-        
-        const existingError = document.getElementById('phoneErrorMsg');
-        if (existingError) {
-          existingError.textContent = errorDiv.textContent;
-        } else {
-          const loginSection = document.querySelector('#phoneLoginSection');
-          if (loginSection) loginSection.appendChild(errorDiv);
-        }
-        
-        btn.disabled = false;
-        btn.textContent = '发送验证码';
-      }
-    }
-
-    async function verifyCode() {
-      const code = document.getElementById('verificationCode').value.trim();
-      if (!code) {
-        alert('请输入验证码');
-        return;
-      }
-
-      const btn = document.getElementById('verifyCodeBtn');
-      btn.disabled = true;
-      btn.textContent = '验证中...';
-
-      try {
-        // 检查是否是测试号码
-        const isTestNumber = localStorage.getItem('todomaster_test_number') === 'true';
-        
-        if (isTestNumber) {
-          // 测试号码：验证码固定为 123456
-          if (code !== '123456') {
-            alert('测试号码验证码错误，正确验证码是：123456');
-            btn.disabled = false;
-            btn.textContent = '验证登录';
-            return;
-          }
-          
-          // 测试号码验证成功，触发数据迁移
-          checkAndMigrateData(currentUser);
-          
-          // 测试号码已经在发送验证码时完成匿名登录，这里只需要完成界面切换
-          localStorage.removeItem('todomaster_test_number');
-          localStorage.setItem('todomaster_logged_in', 'true');
-          localStorage.setItem('todomaster_user_phone', currentUser.phoneNumber);
-          localStorage.setItem('todomaster_user_type', 'test');
-          
-          document.getElementById('codeVerifySection').classList.add('hidden');
-          document.getElementById('phoneSuccessSection').classList.remove('hidden');
-          document.getElementById('loggedInPhone').textContent = currentUser.phoneNumber + ' (测试账号)';
-          
-          updateSyncStatus('synced', currentUser.phoneNumber);
-          saveLastSyncTime();
-          
-          // 设置 Firebase 监听
-          listenToTasks();
-          
-          return;
-        }
-
-        // 正常号码：验证验证码
-        if (!confirmationResult) {
-          alert('请先发送验证码');
-          btn.disabled = false;
-          btn.textContent = '验证登录';
-          return;
-        }
-
-        const result = await confirmationResult.confirm(code);
-        localStorage.removeItem('todomaster_auth_phone');
-        
-        document.getElementById('codeVerifySection').classList.add('hidden');
-        document.getElementById('phoneSuccessSection').classList.remove('hidden');
-        document.getElementById('loggedInPhone').textContent = result.user.phoneNumber;
-        
-        updateSyncStatus('synced', result.user.phoneNumber);
-        saveLastSyncTime();
-        
-        // 登录成功后检查并迁移数据
-        checkAndMigrateData(result.user);
-      } catch (error) {
-        console.error('Verify code failed:', error);
-        alert('验证失败：' + error.message);
-        btn.disabled = false;
-        btn.textContent = '验证登录';
-      }
-    }
-
-    async function sendAuthLink() {
-      const email = document.getElementById('authEmail').value.trim();
-      if (!email) {
-        alert('请输入邮箱地址');
-        return;
-      }
-
-      if (!auth) {
-        alert('Firebase 未初始化，请先配置');
-        return;
-      }
-
-      const btn = document.getElementById('sendAuthLinkBtn');
-      btn.disabled = true;
-      btn.textContent = '发送中...';
-
-      try {
-        const actionCodeSettings = {
-          url: 'https://yindeliang08.github.io/todomaster/',
-          handleCodeInApp: true
-        };
-
-        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-        localStorage.setItem('todomaster_auth_email', email);
-
-        // 使用 querySelector 确保能找到元素
-        const loginSection = document.querySelector('#authLoginSection');
-        const sentSection = document.querySelector('#authSentSection');
-        const sentEmailEl = document.querySelector('#sentEmail');
-        
-        if (loginSection) loginSection.classList.add('hidden');
-        if (sentSection) sentSection.classList.remove('hidden');
-        if (sentEmailEl) sentEmailEl.textContent = email;
-        
-      } catch (error) {
-        console.error('Send auth link failed:', error);
-        
-        // 显示错误在弹窗中（便于手机调试）
-        const errorDiv = document.createElement('div');
-        errorDiv.id = 'authErrorMsg';
-        errorDiv.style.cssText = 'color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: var(--danger-light); border-radius: 4px;';
-        errorDiv.textContent = '发送失败：' + error.message + ' (代码: ' + error.code + ')';
-        
-        // 如果已存在错误提示则更新
-        const existingError = document.getElementById('authErrorMsg');
-        if (existingError) {
-          existingError.textContent = errorDiv.textContent;
-        } else {
-          const loginSection = document.querySelector('#authLoginSection');
-          if (loginSection) loginSection.appendChild(errorDiv);
-        }
-        
-        btn.disabled = false;
-        btn.textContent = '发送登录链接';
-      }
-    }
-
-    async function checkAuthLink() {
-      // 检查当前 URL 是否是邮箱登录链接
-      if (!auth) return;
-      
-      // 防止重复调用：如果已经处理过登录链接，直接返回
-      if (sessionStorage.getItem('todomaster_auth_link_processed')) {
-        console.log('Auth link already processed in this session');
-        return;
-      }
-      
-      try {
-        const isSignInLink = await auth.isSignInWithEmailLink(window.location.href);
-        if (!isSignInLink) return;
-        
-        console.log('Detected email sign-in link');
-        
-        // 标记正在处理登录链接
-        sessionStorage.setItem('todomaster_auth_link_processing', 'true');
-        
-        // 检测到是邮箱登录链接
-        const email = localStorage.getItem('todomaster_auth_email');
-        
-        // 打开登录弹窗
-        document.getElementById('authModal').classList.remove('hidden');
-        
-        if (email) {
-          // 有存储的邮箱，自动完成登录
-          document.getElementById('authLoginSection').classList.remove('hidden');
-          document.getElementById('authSentSection').classList.add('hidden');
-          document.getElementById('authFooter').classList.remove('hidden');
-          document.getElementById('authEmail').value = email;
-          
-          try {
-            updateSyncStatus('syncing', '登录中...');
-            const result = await auth.signInWithEmailLink(email, window.location.href);
-            localStorage.removeItem('todomaster_auth_email');
-            sessionStorage.setItem('todomaster_auth_link_processed', 'true');
-            updateSyncStatus('synced', result.user.email || '已登录');
-            closeAuthModal();
-            // 清理 URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } catch (error) {
-            console.error('Sign in with link failed:', error);
-            alert('登录失败：' + error.message);
-            updateSyncStatus('error', '登录失败');
-            // 清理 URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } finally {
-            sessionStorage.removeItem('todomaster_auth_link_processing');
-          }
-        } else {
-          // 没有存储的邮箱，让用户输入
-          document.getElementById('authLoginSection').classList.remove('hidden');
-          document.getElementById('authSentSection').classList.add('hidden');
-          document.getElementById('authFooter').classList.add('hidden'); // 隐藏发送按钮
-          document.getElementById('authEmail').focus();
-          
-          // 添加提示文字和确认按钮（只在不存在时添加）
-          if (!document.getElementById('authLinkHint')) {
-            const hint = document.createElement('p');
-            hint.id = 'authLinkHint';
-            hint.style.cssText = 'color: var(--warning); font-size: 13px; margin-bottom: 12px; text-align: center;';
-            hint.textContent = '📧 请输入发送登录链接的邮箱地址';
-            
-            // 添加确认登录按钮
-            const confirmBtn = document.createElement('button');
-            confirmBtn.id = 'authConfirmBtn';
-            confirmBtn.className = 'btn-save';
-            confirmBtn.style.cssText = 'width: 100%; margin-top: 12px;';
-            confirmBtn.textContent = '确认登录';
-            confirmBtn.onclick = async () => {
-              const inputEmail = document.getElementById('authEmail').value.trim();
-              if (!inputEmail) {
-                alert('请输入邮箱地址');
-                return;
-              }
-              
-              // 防止重复点击
-              if (confirmBtn.disabled) return;
-              confirmBtn.disabled = true;
-              confirmBtn.textContent = '登录中...';
-              
-              try {
-                updateSyncStatus('syncing', '登录中...');
-                const result = await auth.signInWithEmailLink(inputEmail, window.location.href);
-                sessionStorage.setItem('todomaster_auth_link_processed', 'true');
-                updateSyncStatus('synced', result.user.email || '已登录');
-                closeAuthModal();
-                // 清理 URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-              } catch (error) {
-                console.error('Sign in with link failed:', error);
-                alert('登录失败：' + error.message);
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = '确认登录';
-                updateSyncStatus('error', '登录失败');
-              }
-            };
-            
-            // 插入到 authEmail input 后面
-            const loginSection = document.getElementById('authLoginSection');
-            loginSection.appendChild(hint);
-            loginSection.appendChild(confirmBtn);
-          }
-        }
-      } catch (error) {
-        console.error('Check auth link error:', error);
-      } finally {
-        sessionStorage.removeItem('todomaster_auth_link_processing');
-      }
-    }
-
     async function signOut() {
-      if (!auth) return;
+      if (!supabase) return;
       try {
-        await auth.signOut();
+        await supabase.auth.signOut();
+        currentUser = null;
         state.tasks = [];
         render();
       } catch (error) {
@@ -3133,136 +2715,68 @@
       }
       
       localStorage.removeItem('todomaster_logged_in');
-      localStorage.removeItem('todomaster_user_phone');
-      localStorage.removeItem('todomaster_user_type');
     }
 
-    // Initialize Firebase
-    async function initFirebase() {
-      if (!isFirebaseConfigured() && !PRESET_FIREBASE_CONFIG) {
-        updateSyncStatus('error', '未配置');
-        document.getElementById('setupBanner').classList.add('show');
-        return false;
-      }
-
+    // Initialize Supabase
+    async function initSupabase() {
       try {
-        const config = getFirebaseConfig();
-
-        // Initialize Firebase
-        if (!firebaseInitialized) {
-          firebase.initializeApp(config);
-          firebaseInitialized = true;
+        supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Check existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          currentUser = session.user;
+          updateSyncStatus('synced', currentUser.phone || '已登录');
+          await loadTasksFromSupabase();
+        } else {
+          updateSyncStatus('synced', '未登录');
         }
-
-        auth = firebase.auth();
-        db = firebase.firestore();
-
-        // Enable offline persistence
-        await db.enablePersistence({ synchronizeTabs: true });
-
-        updateSyncStatus('syncing', '连接中...');
-
-        // Listen to auth state
-        auth.onAuthStateChanged(async (user) => {
-          if (user) {
-            currentUser = user;
-            
-            // 检查是否是测试用户并恢复状态（在调用 listenToTasks 之前）
-            const userType = localStorage.getItem('todomaster_user_type');
-            const userPhone = localStorage.getItem('todomaster_user_phone');
-            if (userType === 'test' && userPhone) {
-              currentUser.phoneNumber = userPhone;
-              currentUser.isTestUser = true;
-              console.log('Restored test user:', userPhone);
-            }
-            
-            console.log('Firebase authenticated:', getCurrentUserId(), currentUser.phoneNumber || '(anonymous)');
-            await listenToTasks();
+        
+        // Listen to auth changes
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (session) {
+            currentUser = session.user;
+            updateSyncStatus('synced', currentUser.phone || '已登录');
+            await loadTasksFromSupabase();
           } else {
-            // 检查是否有测试用户登录记录
-            const isLoggedIn = localStorage.getItem('todomaster_logged_in');
-            const userType = localStorage.getItem('todomaster_user_type');
-            
-            if (isLoggedIn === 'true' && userType === 'test') {
-              // 测试用户需要重新匿名登录
-              try {
-                const result = await auth.signInAnonymously();
-                currentUser = result.user;
-                const userPhone = localStorage.getItem('todomaster_user_phone');
-                currentUser.phoneNumber = userPhone;
-                currentUser.isTestUser = true;
-                console.log('Re-signed as test user:', userPhone);
-                await listenToTasks();
-              } catch (error) {
-                console.error('Anonymous sign-in failed:', error);
-                updateSyncStatus('error', '登录失败');
-              }
-            } else {
-              // 普通匿名登录
-              try {
-                const result = await auth.signInAnonymously();
-                currentUser = result.user;
-                console.log('Signed in anonymously:', currentUser.uid);
-                updateSyncStatus('synced', '未登录');
-              } catch (error) {
-                console.error('Anonymous sign-in failed:', error);
-                updateSyncStatus('error', '登录失败');
-              }
-            }
+            currentUser = null;
+            updateSyncStatus('synced', '未登录');
           }
         });
-
+        
         return true;
       } catch (error) {
-        console.error('Firebase initialization failed:', error);
+        console.error('Supabase initialization failed:', error);
         updateSyncStatus('error', '初始化失败');
         return false;
       }
     }
 
-    // Listen to tasks collection
-    async function listenToTasks() {
-      if (!currentUser || !db) return;
-
-      // Unsubscribe from previous listener
-      if (tasksUnsubscribe) {
-        tasksUnsubscribe();
-      }
-
-      updateSyncStatus('syncing', '同步中...');
-
-      const userId = getCurrentUserId();
-      const tasksRef = db.collection('users').doc(userId).collection('tasks_' + state.currentScene);
-
-      tasksUnsubscribe = tasksRef.onSnapshot((snapshot) => {
-        const cloudTasks = [];
-        snapshot.forEach((doc) => {
-          cloudTasks.push({ id: doc.id, ...doc.data() });
-        });
-
-        // Merge with local tasks
-        if (state.tasks.length === 0 && cloudTasks.length > 0) {
-          // First load - use cloud data
-          state.tasks = cloudTasks;
-          saveTasksLocal();
-        } else if (cloudTasks.length > 0) {
-          // Merge: add cloud tasks that don't exist locally
-          cloudTasks.forEach(cloudTask => {
-            const exists = state.tasks.find(t => t.id === cloudTask.id);
-            if (!exists) {
-              state.tasks.push(cloudTask);
-            }
-          });
+    async function loadTasksFromSupabase() {
+      if (!supabase || !currentUser) return;
+      
+      try {
+        updateSyncStatus('syncing', '同步中...');
+        
+        const { data, error } = await supabase
+          .from('tasks_' + state.currentScene)
+          .select('*')
+          .eq('user_id', currentUser.id);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          state.tasks = data;
           saveTasksLocal();
         }
-
+        
         render();
         saveLastSyncTime();
-        updateSyncStatus('synced', currentUser.phoneNumber || currentUser.email || '已同步');
-      }, (error) => {
-        console.error('Listen failed:', error);
-        updateSyncStatus('error', '同步错误');
-      });
+        updateSyncStatus('synced', currentUser.phone || '已同步');
+      } catch (error) {
+        console.error('Load from Supabase failed:', error);
+        updateSyncStatus('error', '同步失败');
+      }
     }
 
     // Update sync status UI
@@ -3272,36 +2786,6 @@
 
       statusEl.className = 'sync-status ' + status;
       textEl.textContent = text;
-    }
-
-    // ==================== Firebase Config Modal ====================
-    function openSetupModal() {
-      document.getElementById('setupModal').classList.remove('hidden');
-      const savedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
-      if (savedConfig) {
-        document.getElementById('firebaseConfig').value = savedConfig;
-      }
-    }
-
-    function closeSetupModal() {
-      document.getElementById('setupModal').classList.add('hidden');
-    }
-
-    function saveFirebaseConfig() {
-      const configText = document.getElementById('firebaseConfig').value.trim();
-      if (!configText) {
-        alert('请粘贴 Firebase 配置信息');
-        return;
-      }
-
-      try {
-        const config = JSON.parse(configText);
-        localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
-        closeSetupModal();
-        location.reload();
-      } catch (e) {
-        alert('配置格式错误，请检查 JSON 格式');
-      }
     }
 
     // ==================== State Management ====================
@@ -3338,9 +2822,9 @@
       // Load new scene tasks
       loadTasksLocal();
       
-      // Re-setup Firebase listener for new scene
-      if (state.db) {
-        listenToTasks();
+      // Re-setup Supabase data load for new scene
+      if (supabase) {
+        loadTasksFromSupabase();
       }
       
       render();
@@ -3405,28 +2889,34 @@
       });
     }
 
-    // ==================== Firestore Operations ====================
-    async function saveTaskToFirestore(task) {
-      if (!db || !currentUser) return;
-
+    // ==================== Supabase Operations ====================
+    async function saveTaskToSupabase(task) {
+      if (!supabase || !currentUser) return;
       try {
-        const userId = getCurrentUserId();
-        const tasksRef = db.collection('users').doc(userId).collection('tasks_' + state.currentScene);
-        await tasksRef.doc(task.id).set(task, { merge: true });
+        const { error } = await supabase
+          .from('tasks_' + state.currentScene)
+          .upsert({
+            id: task.id,
+            user_id: currentUser.id,
+            ...task
+          });
+        if (error) throw error;
       } catch (error) {
-        console.error('Failed to save to Firestore:', error);
+        console.error('Failed to save to Supabase:', error);
       }
     }
 
-    async function deleteTaskFromFirestore(taskId) {
-      if (!db || !currentUser) return;
-
+    async function deleteTaskFromSupabase(taskId) {
+      if (!supabase || !currentUser) return;
       try {
-        const userId = getCurrentUserId();
-        const tasksRef = db.collection('users').doc(userId).collection('tasks_' + state.currentScene);
-        await tasksRef.doc(taskId).delete();
+        const { error } = await supabase
+          .from('tasks_' + state.currentScene)
+          .delete()
+          .eq('id', taskId)
+          .eq('user_id', currentUser.id);
+        if (error) throw error;
       } catch (error) {
-        console.error('Failed to delete from Firestore:', error);
+        console.error('Failed to delete from Supabase:', error);
       }
     }
 
@@ -3530,7 +3020,7 @@
       };
       state.tasks.push(task);
       saveTasksLocal();
-      saveTaskToFirestore(task);
+      saveTaskToSupabase(task);
       render();
     }
 
@@ -3544,7 +3034,7 @@
         task.priority = priority || 'normal';
         task.tag = tag;
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         render();
       }
     }
@@ -3552,7 +3042,7 @@
     function deleteTask(id) {
       state.tasks = state.tasks.filter(t => t.id !== id);
       saveTasksLocal();
-      deleteTaskFromFirestore(id);
+      deleteTaskFromSupabase(id);
       render();
     }
 
@@ -3562,7 +3052,7 @@
         task.completed = !task.completed;
         task.completedAt = task.completed ? Date.now() : null;
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         render();
         // Re-render day detail modal if open
         const dayDetailModal = document.getElementById('dayDetailModal');
@@ -3586,7 +3076,7 @@
         task.dueDate = newDate;
         task.postponeCount++;
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         render();
       }
     }
@@ -3603,7 +3093,7 @@
           priority: priority // 'urgent-important', 'urgent', 'important', 'normal'
         });
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         // Only re-render the subtask section, not the whole page
         renderSubtaskSection(taskId);
         // Also re-render day detail modal if open
@@ -3624,7 +3114,7 @@
         if (subtask) {
           subtask.completed = !subtask.completed;
           saveTasksLocal();
-          saveTaskToFirestore(task);
+          saveTaskToSupabase(task);
           renderSubtaskSection(taskId);
           // Also re-render day detail modal if open
           const dayDetailModal = document.getElementById('dayDetailModal');
@@ -3643,7 +3133,7 @@
       if (task) {
         task.subtasks = task.subtasks.filter(s => s.id !== subtaskId);
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         renderSubtaskSection(taskId);
         // Also re-render day detail modal if open
         const dayDetailModal = document.getElementById('dayDetailModal');
@@ -4645,7 +4135,7 @@
         st.priority = state.editingSubtaskPriority;
 
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         closeSubtaskEditModal();
         openDayDetailModal(state.selectedDate);
       }
@@ -4706,7 +4196,7 @@
         st.postponeCount = (st.postponeCount || 0) + 1;
 
         saveTasksLocal();
-        saveTaskToFirestore(task);
+        saveTaskToSupabase(task);
         closeSubtaskPostponeModal();
         openDayDetailModal(state.selectedDate);
       }
@@ -5185,38 +4675,19 @@
 
     // ==================== Initialize ====================
     async function init() {
-      // Restore last scene
-      const savedScene = localStorage.getItem('todomaster_scene') || 'work';
-      state.currentScene = savedScene;
-      applySceneTheme(savedScene);
-      document.querySelectorAll('.scene-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.scene === savedScene);
-      });
-
       // Load local tasks first
       loadTasksLocal();
+      loadLastSyncTime();
 
       // Render initial view
       render();
 
-      // Initialize Firebase and wait for it to complete before checking auth link
-      await initFirebase();
-
-      // 测试用户状态恢复已在 onAuthStateChanged 中处理
-      // 这里只需要检查是否需要弹出登录弹窗
-
-      // Load last sync time
-      loadLastSyncTime();
-
-      // Check if opened from email link (after Firebase is ready)
-      checkAuthLink();
-
+      // Initialize Supabase
+      await initSupabase();
+      
       // Open auth modal on first load (only if not logged in)
       setTimeout(() => {
         const isLoggedIn = localStorage.getItem('todomaster_logged_in');
-        const userType = localStorage.getItem('todomaster_user_type');
-        
-        // 只有未登录时才自动弹出
         if (!isLoggedIn && !currentUser) {
           openAuthModal();
         }
