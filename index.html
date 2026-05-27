@@ -2878,7 +2878,16 @@
             isTestUser: true
           };
           
+          // 测试号码登录成功
           localStorage.removeItem('todomaster_test_number');
+          
+          // 触发数据迁移检测
+          checkAndMigrateData(mockUser);
+          
+          // 保存测试号码登录状态
+          localStorage.setItem('todomaster_logged_in', 'true');
+          localStorage.setItem('todomaster_user_phone', mockUser.phoneNumber);
+          localStorage.setItem('todomaster_user_type', 'test');
           
           // 更新状态
           currentUser = mockUser;
@@ -3101,6 +3110,10 @@
       } catch (error) {
         console.error('Sign out failed:', error);
       }
+      
+      localStorage.removeItem('todomaster_logged_in');
+      localStorage.removeItem('todomaster_user_phone');
+      localStorage.removeItem('todomaster_user_type');
     }
 
     // Initialize Firebase
@@ -5136,6 +5149,22 @@
 
       // Initialize Firebase and wait for it to complete before checking auth link
       await initFirebase();
+
+      // 恢复测试号码登录状态
+      const isLoggedIn = localStorage.getItem('todomaster_logged_in');
+      const userPhone = localStorage.getItem('todomaster_user_phone');
+      const userType = localStorage.getItem('todomaster_user_type');
+      
+      if (isLoggedIn === 'true' && userType === 'test' && userPhone) {
+        // 恢复测试用户状态
+        currentUser = {
+          uid: 'test-user-' + Date.now(),
+          phoneNumber: userPhone,
+          isTestUser: true
+        };
+        updateSyncStatus('synced', userPhone);
+        loadLastSyncTime();
+      }
 
       // Load last sync time
       loadLastSyncTime();
