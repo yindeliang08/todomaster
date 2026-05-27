@@ -3166,20 +3166,48 @@
         auth.onAuthStateChanged(async (user) => {
           if (user) {
             currentUser = user;
-            console.log('Firebase authenticated:', user.uid, user.phoneNumber || user.email || '(anonymous)');
-            updateSyncStatus('synced', user.phoneNumber ? user.phoneNumber : (user.email ? user.email : '已同步'));
+            
+            // 检查是否是测试用户并恢复状态（在调用 listenToTasks 之前）
+            const userType = localStorage.getItem('todomaster_user_type');
+            const userPhone = localStorage.getItem('todomaster_user_phone');
+            if (userType === 'test' && userPhone) {
+              currentUser.phoneNumber = userPhone;
+              currentUser.isTestUser = true;
+              console.log('Restored test user:', userPhone);
+            }
+            
+            console.log('Firebase authenticated:', getCurrentUserId(), currentUser.phoneNumber || '(anonymous)');
             await listenToTasks();
-            saveLastSyncTime();
           } else {
-            // Sign in anonymously
-            try {
-              const result = await auth.signInAnonymously();
-              currentUser = result.user;
-              console.log('Signed in anonymously:', currentUser.uid);
-              updateSyncStatus('synced', '未登录');
-            } catch (error) {
-              console.error('Anonymous sign-in failed:', error);
-              updateSyncStatus('error', '登录失败');
+            // 检查是否有测试用户登录记录
+            const isLoggedIn = localStorage.getItem('todomaster_logged_in');
+            const userType = localStorage.getItem('todomaster_user_type');
+            
+            if (isLoggedIn === 'true' && userType === 'test') {
+              // 测试用户需要重新匿名登录
+              try {
+                const result = await auth.signInAnonymously();
+                currentUser = result.user;
+                const userPhone = localStorage.getItem('todomaster_user_phone');
+                currentUser.phoneNumber = userPhone;
+                currentUser.isTestUser = true;
+                console.log('Re-signed as test user:', userPhone);
+                await listenToTasks();
+              } catch (error) {
+                console.error('Anonymous sign-in failed:', error);
+                updateSyncStatus('error', '登录失败');
+              }
+            } else {
+              // 普通匿名登录
+              try {
+                const result = await auth.signInAnonymously();
+                currentUser = result.user;
+                console.log('Signed in anonymously:', currentUser.uid);
+                updateSyncStatus('synced', '未登录');
+              } catch (error) {
+                console.error('Anonymous sign-in failed:', error);
+                updateSyncStatus('error', '登录失败');
+              }
             }
           }
         });
@@ -5174,24 +5202,8 @@
       // Initialize Firebase and wait for it to complete before checking auth link
       await initFirebase();
 
-      // 恢复测试号码登录状态
-      const isLoggedIn = localStorage.getItem('todomaster_logged_in');
-      const userPhone = localStorage.getItem('todomaster_user_phone');
-      const userType = localStorage.getItem('todomaster_user_type');
-      
-      if (isLoggedIn === 'true' && userType === 'test' && userPhone) {
-        // 恢复测试用户状态
-        // 注意：这里需要等待 Firebase 初始化完成后再设置
-        setTimeout(() => {
-          if (auth && currentUser) {
-            currentUser.phoneNumber = userPhone;
-            currentUser.isTestUser = true;
-            updateSyncStatus('synced', userPhone);
-            loadLastSyncTime();
-            listenToTasks(); // 启动 Firebase 监听
-          }
-        }, 1000);
-      }
+      // 测试用户状态恢复已在 onAuthStateChanged 中处理
+      // 这里只需要检查是否需要弹出登录弹窗
 
       // Load last sync time
       loadLastSyncTime();
