@@ -2752,14 +2752,25 @@
     let confirmationResult = null;
 
     async function sendVerificationCode() {
-      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      let phoneNumber = document.getElementById('phoneNumber').value.trim();
       if (!phoneNumber) {
         alert('请输入手机号');
         return;
       }
 
-      // 自动添加 +86 前缀
-      const fullPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : '+86' + phoneNumber;
+      // 清理手机号中的空格和特殊字符
+      phoneNumber = phoneNumber.replace(/\s/g, '').replace(/-/g, '');
+      
+      // 自动添加 +86 前缀（如果用户没有输入国家代码）
+      let fullPhoneNumber;
+      if (phoneNumber.startsWith('+')) {
+        fullPhoneNumber = phoneNumber;
+      } else if (phoneNumber.length === 11) {
+        // 中国手机号 11 位，直接添加 +86
+        fullPhoneNumber = '+86' + phoneNumber;
+      } else {
+        fullPhoneNumber = '+' + phoneNumber;
+      }
 
       if (!auth) {
         alert('Firebase 未初始化，请先配置');
@@ -2779,7 +2790,6 @@
               // reCAPTCHA solved
             },
             'expired-callback': () => {
-              // Response expired
               alert('验证码已过期，请重试');
             }
           });
@@ -2806,11 +2816,20 @@
           window.recaptchaVerifier = null;
         }
         
-        // 显示错误在弹窗中
+        // 显示更友好的错误提示
+        let errorMessage = error.message;
+        if (error.code === 'auth/argument-error') {
+          errorMessage = '手机号格式错误，请检查手机号是否正确';
+        } else if (error.code === 'auth/captcha-check-failed') {
+          errorMessage = '验证码验证失败，请重试';
+        } else if (error.code === 'auth/invalid-phone-number') {
+          errorMessage = '无效的手机号格式，请输入正确的手机号';
+        }
+        
         const errorDiv = document.createElement('div');
         errorDiv.id = 'phoneErrorMsg';
         errorDiv.style.cssText = 'color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: var(--danger-light); border-radius: 4px;';
-        errorDiv.textContent = '发送失败：' + error.message + ' (代码: ' + (error.code || 'unknown') + ')';
+        errorDiv.textContent = '发送失败：' + errorMessage;
         
         const existingError = document.getElementById('phoneErrorMsg');
         if (existingError) {
