@@ -2952,13 +2952,16 @@
       console.log('saveTaskToSupabase: Saving task:', task.id, 'for user:', currentUser.id, 'scene:', state.currentScene);
       
       try {
+        // 构造保存的数据，确保 user_id 正确设置
+        const taskData = {
+          ...task,
+          id: task.id,
+          user_id: currentUser.id
+        };
+        
         const { error } = await supabaseClient
           .from('tasks_' + state.currentScene)
-          .upsert({
-            id: task.id,
-            user_id: currentUser.id,
-            ...task
-          });
+          .upsert(taskData);
           
         console.log('saveTaskToSupabase: Result:', { error });
           
