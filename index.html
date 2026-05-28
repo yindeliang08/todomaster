@@ -964,6 +964,26 @@
       gap: 8px;
     }
 
+    .subtask-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .subtask-due-date {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .subtask-item.completed .subtask-due-date {
+      text-decoration: line-through;
+    }
+
     .subtask-checkbox {
       width: 18px;
       height: 18px;
@@ -3857,7 +3877,7 @@
       state.tasks.forEach(task => {
         if (task.subtasks) {
           task.subtasks.forEach(st => {
-            if (st.dueDate && st.dueDate === dateStr && !st.completed) {
+            if (st.dueDate && st.dueDate === dateStr) {
               subtasksForDay.push({ subtask: st, parentTask: task });
             }
           });
@@ -4165,6 +4185,18 @@
                   <div class="subtask-item-main">
                     <div class="subtask-content-row">
                       <span class="subtask-text">${escapeHtml(st.content)}</span>
+                      <div class="subtask-meta">
+                        ${st.dueDate ? `<span class="subtask-due-date">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                          </svg>
+                          ${formatDateLocale(st.dueDate)}
+                        </span>` : ''}
+                        <span class="priority-tag ${st.priority || 'normal'}" style="font-size: 10px; padding: 1px 6px;">${getPriorityLabel(st.priority || 'normal')}</span>
+                      </div>
                     </div>
                   </div>
                   <div class="subtask-actions">
