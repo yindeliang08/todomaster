@@ -3004,6 +3004,11 @@
         
         const initPromise = async () => {
           addDebugLog('正在创建 Supabase 客户端...');
+          
+          // 检查 localStorage 中的会话数据
+          const sbSession = localStorage.getItem('sb-nmxlhbesuyweerfpwqhm-auth-token');
+          addDebugLog('localStorage 会话数据: ' + (sbSession ? '存在 (' + sbSession.length + ' 字符)' : '无'));
+          
           supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: {
               autoRefreshToken: true,
@@ -3025,11 +3030,18 @@
               setTimeout(() => reject(new Error('获取会话超时')), 8000);
             });
             const sessionPromise = supabaseClient.auth.getSession();
+            addDebugLog('getSession() 已调用，等待响应...');
             const result = await Promise.race([sessionPromise, sessionTimeout]);
             session = result.data.session;
-            addDebugLog('会话获取完成');
+            addDebugLog('会话获取完成，session=' + (session ? '存在' : 'null'));
           } catch (e) {
             addDebugLog('获取会话超时或失败: ' + e.message);
+            // 超时后清除可能损坏的会话数据
+            if (sbSession) {
+              addDebugLog('尝试清除可能损坏的会话数据...');
+              localStorage.removeItem('sb-nmxlhbesuyweerfpwqhm-auth-token');
+              localStorage.removeItem('supabase.auth.token');
+            }
             // 超时后继续，当作无会话处理
           }
           
@@ -3135,12 +3147,15 @@
           setTimeout(() => reject(new Error('加载任务超时')), 10000);
         });
         
+        addDebugLog('正在查询数据库: tasks_' + state.currentScene);
         const queryPromise = supabaseClient
           .from('tasks_' + state.currentScene)
           .select('*')
           .eq('user_id', currentUser.id);
         
+        addDebugLog('等待数据库响应...');
         const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        addDebugLog('数据库响应 received');
           
         console.log('loadTasksFromSupabase: Result:', { data, error });
         
