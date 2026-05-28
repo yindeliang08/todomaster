@@ -3003,18 +3003,49 @@
         });
         
         const initPromise = async () => {
-          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          addDebugLog('正在创建 Supabase 客户端...');
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+              autoRefreshToken: true,
+              persistSession: true,
+              detectSessionInUrl: true
+            },
+            global: {
+              headers: { 'X-Client-Info': 'todomaster' }
+            }
+          });
           
           addDebugLog('Supabase 客户端创建成功');
           
-          // Check existing session
-          const { data: { session } } = await supabaseClient.auth.getSession();
+          // Check existing session with timeout
+          addDebugLog('正在获取会话...');
+          let session = null;
+          try {
+            const sessionTimeout = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('获取会话超时')), 8000);
+            });
+            const sessionPromise = supabaseClient.auth.getSession();
+            const result = await Promise.race([sessionPromise, sessionTimeout]);
+            session = result.data.session;
+            addDebugLog('会话获取完成');
+          } catch (e) {
+            addDebugLog('获取会话超时或失败: ' + e.message);
+            // 超时后继续，当作无会话处理
+          }
+          
           if (session) {
             currentUser = session.user;
             addDebugLog('已有会话，用户: ' + (currentUser.email || currentUser.id));
             updateSyncStatus('synced', currentUser.phone || '已登录');
-            await loadTasksFromSupabase();
-            await syncPendingTasks();
+            try {
+              addDebugLog('开始加载任务...');
+              await loadTasksFromSupabase();
+              addDebugLog('开始同步待同步任务...');
+              await syncPendingTasks();
+              addDebugLog('同步完成');
+            } catch (e) {
+              addDebugLog('加载/同步任务失败: ' + e.message);
+            }
           } else {
             addDebugLog('无会话');
             updateSyncStatus('synced', '未登录');
@@ -3099,10 +3130,17 @@
       try {
         updateSyncStatus('syncing', '同步中...');
         
-        const { data, error } = await supabaseClient
+        // 设置查询超时 - 10秒
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('加载任务超时')), 10000);
+        });
+        
+        const queryPromise = supabaseClient
           .from('tasks_' + state.currentScene)
           .select('*')
           .eq('user_id', currentUser.id);
+        
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
           
         console.log('loadTasksFromSupabase: Result:', { data, error });
         
