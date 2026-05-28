@@ -810,6 +810,47 @@
       flex-wrap: wrap;
     }
 
+    /* 列表顶部工具栏 */
+    .list-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .list-toolbar-btn {
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .list-toolbar-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .list-toolbar-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .list-toolbar-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border-light);
+    }
+
     .tag-filter-btn {
       padding: 4px 12px;
       border: 1px solid var(--border);
@@ -3203,7 +3244,9 @@
       currentMonth: new Date(),
       selectedTaskId: null,
       selectedDate: null,
-      modalSubtasks: [] // Store subtasks being added in modal
+      modalSubtasks: [], // Store subtasks being added in modal
+      listSubtasksExpanded: true, // 列表页子任务展开状态
+      listTagFilter: '' // 列表页标签筛选
     };
 
     // Local Storage
@@ -3453,6 +3496,29 @@
           taskEl.style.display = taskTag === tag ? '' : 'none';
         }
       });
+    }
+
+    // 一键展开/收起所有子任务
+    function toggleAllSubtasks() {
+      state.listSubtasksExpanded = !state.listSubtasksExpanded;
+      const sections = document.querySelectorAll('#listView .subtasks-section');
+      sections.forEach(el => {
+        if (state.listSubtasksExpanded) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+      const textEl = document.getElementById('toggleSubtasksText');
+      if (textEl) {
+        textEl.textContent = state.listSubtasksExpanded ? '收起子任务' : '展开子任务';
+      }
+    }
+
+    // 按标签筛选列表
+    function filterListByTag(tag) {
+      state.listTagFilter = tag;
+      renderList();
     }
 
     function addTask(content, dueDate, dueTime, subtasks = [], priority = 'normal', tag = '') {
@@ -4036,58 +4102,88 @@
       // Sort completed by completed date
       completed.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
 
-      let html = '';
+      // Collect all unique tags for filter
+      const allTags = new Set();
+      tasks.forEach(t => { if (t.tag) allTags.add(t.tag); });
+      const tagsArr = [...allTags];
+
+      // Build toolbar
+      const currentFilter = state.listTagFilter || '';
+      const subtasksExpanded = state.listSubtasksExpanded !== false; // default expanded
+      let toolbarHtml = `<div class="list-toolbar">`;
+      toolbarHtml += `<button class="list-toolbar-btn" onclick="toggleAllSubtasks()" id="toggleSubtasksBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 11 12 14 22 4"></polyline>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+        <span id="toggleSubtasksText">${subtasksExpanded ? '收起子任务' : '展开子任务'}</span>
+      </button>`;
+      toolbarHtml += `<div class="list-toolbar-divider"></div>`;
+      toolbarHtml += `<button class="list-toolbar-btn ${!currentFilter ? 'active' : ''}" onclick="filterListByTag('')">全部</button>`;
+      tagsArr.forEach(tag => {
+        toolbarHtml += `<button class="list-toolbar-btn ${currentFilter === tag ? 'active' : ''}" onclick="filterListByTag('${escapeHtml(tag)}')">${escapeHtml(tag)}</button>`;
+      });
+      toolbarHtml += `</div>`;
+
+      // Filter tasks by tag
+      const filteredTasks = currentFilter
+        ? tasks.filter(t => t.tag === currentFilter)
+        : tasks;
+      const filteredIncomplete = filteredTasks.filter(t => !t.completed);
+      const filteredCompleted = filteredTasks.filter(t => t.completed);
+
+      // Re-sort filtered
+      filteredIncomplete.sort((a, b) => {
+        if (a.dueDate === b.dueDate) {
+          if (a.dueTime && b.dueTime) return a.dueTime.localeCompare(b.dueTime);
+          if (a.dueTime) return -1;
+          if (b.dueTime) return 1;
+          return 0;
+        }
+        return a.dueDate.localeCompare(b.dueDate);
+      });
+      filteredCompleted.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
+      let html = toolbarHtml;
 
       // Overdue section
-      const overdue = incomplete.filter(t => t.dueDate < today && !isToday(t.dueDate));
+      const overdue = filteredIncomplete.filter(t => t.dueDate < today && !isToday(t.dueDate));
       if (overdue.length > 0) {
         html += renderListSection('已过期', overdue);
       }
 
       // Today section
-      const todayTasks = incomplete.filter(t => isToday(t.dueDate));
+      const todayTasks = filteredIncomplete.filter(t => isToday(t.dueDate));
       if (todayTasks.length > 0) {
         html += renderListSection('今天', todayTasks);
       }
 
       // Tomorrow section
-      const tomorrowTasks = incomplete.filter(t => t.dueDate === tomorrow);
+      const tomorrowTasks = filteredIncomplete.filter(t => t.dueDate === tomorrow);
       if (tomorrowTasks.length > 0) {
         html += renderListSection('明天', tomorrowTasks);
       }
 
       // This week section
       const weekEnd = formatDate(new Date(Date.now() + 7 * 86400000));
-      const thisWeek = incomplete.filter(t => t.dueDate > tomorrow && t.dueDate <= weekEnd);
+      const thisWeek = filteredIncomplete.filter(t => t.dueDate > tomorrow && t.dueDate <= weekEnd);
       if (thisWeek.length > 0) {
         html += renderListSection('本周', thisWeek);
       }
 
       // Later section
-      const later = incomplete.filter(t => t.dueDate > weekEnd);
+      const later = filteredIncomplete.filter(t => t.dueDate > weekEnd);
       if (later.length > 0) {
         html += renderListSection('更晚', later);
       }
 
-      // Completed section with tag filter
-      if (completed.length > 0) {
-        // Collect unique tags from completed tasks
-        const completedTags = new Set();
-        completed.forEach(t => { if (t.tag) completedTags.add(t.tag); });
-
-        let filterHtml = '';
-        if (completedTags.size > 0) {
-          const tagsArr = [...completedTags];
-          filterHtml = `<div class="completed-tag-filter">
-            <button class="tag-filter-btn active" onclick="filterCompletedByTag(this, '')">全部</button>
-            ${tagsArr.map(tag => `<button class="tag-filter-btn" onclick="filterCompletedByTag(this, '${escapeHtml(tag)}')">${escapeHtml(tag)}</button>`).join('')}
-          </div>`;
-        }
-        html += filterHtml + `<div class="completed-tasks-container">${renderListSection('已完成', completed)}</div>`;
+      // Completed section
+      if (filteredCompleted.length > 0) {
+        html += renderListSection('已完成', filteredCompleted);
       }
 
-      if (html === '') {
-        html = renderEmptyState();
+      if (html === toolbarHtml) {
+        html += renderEmptyState();
       }
 
       // Remember subtask section visibility states before re-rendering
@@ -4098,13 +4194,12 @@
 
       container.innerHTML = html;
 
-      // Restore subtask section visibility states
-      Object.entries(subtaskVisibility).forEach(([id, wasVisible]) => {
-        const el = document.getElementById(id);
-        if (el && wasVisible) {
-          el.classList.remove('hidden');
-        }
-      });
+      // Apply subtasks expanded/collapsed state
+      if (state.listSubtasksExpanded === false) {
+        container.querySelectorAll('.subtasks-section').forEach(el => {
+          el.classList.add('hidden');
+        });
+      }
 
       // Bind events
       container.querySelectorAll('.task-checkbox').forEach(el => {
