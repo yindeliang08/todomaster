@@ -403,6 +403,11 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-8px); }
+    }
+
     .calendar-header {
       display: flex;
       align-items: center;
@@ -613,6 +618,17 @@
       background: var(--priority-normal-bg);
       color: var(--priority-normal);
       border-left: 3px solid var(--priority-normal);
+    }
+
+    /* Completed state overrides priority colors */
+    .day-task-item.completed.priority-urgent-important,
+    .day-task-item.completed.priority-urgent,
+    .day-task-item.completed.priority-important,
+    .day-task-item.completed.priority-normal {
+      background: var(--border-light);
+      color: var(--text-muted);
+      text-decoration: line-through;
+      border-left-color: var(--text-muted);
     }
 
     .day-task-checkbox {
@@ -2530,6 +2546,109 @@
     let currentUser = null;
     let tasksChannel = null;
 
+    // 待同步任务队列
+    let pendingSyncTasks = JSON.parse(localStorage.getItem('todomaster_pending_sync') || '[]');
+
+    // 保存待同步队列到本地
+    function savePendingSyncTasks() {
+      localStorage.setItem('todomaster_pending_sync', JSON.stringify(pendingSyncTasks));
+      updatePendingSyncDisplay();
+    }
+
+    // 添加任务到待同步队列
+    function addToPendingSync(task) {
+      const exists = pendingSyncTasks.find(t => t.id === task.id);
+      if (!exists) {
+        pendingSyncTasks.push({
+          ...task,
+          _scene: state.currentScene,
+          _retryCount: 0,
+          _lastTry: Date.now()
+        });
+        savePendingSyncTasks();
+        addDebugLog('已添加到待同步队列，当前待同步: ' + pendingSyncTasks.length + ' 个任务');
+      }
+    }
+
+    // 从待同步队列移除
+    function removeFromPendingSync(taskId) {
+      pendingSyncTasks = pendingSyncTasks.filter(t => t.id !== taskId);
+      savePendingSyncTasks();
+    }
+
+    // 同步待同步队列
+    async function syncPendingTasks() {
+      if (!supabaseClient || !currentUser || pendingSyncTasks.length === 0) return;
+
+      // 检查网络状态
+      if (!navigator.onLine) {
+        addDebugLog('网络离线，跳过同步待同步任务');
+        return;
+      }
+
+      addDebugLog('开始同步 ' + pendingSyncTasks.length + ' 个待同步任务');
+      showToast('正在同步 ' + pendingSyncTasks.length + ' 个本地缓存任务...');
+
+      const tasksToSync = [...pendingSyncTasks];
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const task of tasksToSync) {
+        if (task._retryCount > 3) {
+          addDebugLog('任务 ' + task.id + ' 重试次数过多，跳过');
+          removeFromPendingSync(task.id);
+          continue;
+        }
+
+        try {
+          const currentScene = state.currentScene;
+          state.currentScene = task._scene || 'work';
+
+          const taskData = {
+            id: task.id,
+            user_id: currentUser.id,
+            title: task.content || task.title,
+            completed: task.completed || false,
+            dueDate: task.dueDate || '',
+            dueTime: task.dueTime || '',
+            priority: task.priority || 'normal',
+            tag: task.tag || '',
+            subtasks: task.subtasks || [],
+            completedAt: task.completedAt || null,
+            postponeCount: task.postponeCount || 0,
+            postponeHistory: task.postponeHistory || [],
+            createdAt: task.createdAt || Date.now()
+          };
+
+          const { error } = await supabaseClient
+            .from('tasks_' + state.currentScene)
+            .upsert(taskData);
+
+          if (error) throw error;
+
+          removeFromPendingSync(task.id);
+          successCount++;
+
+          state.currentScene = currentScene;
+        } catch (error) {
+          task._retryCount++;
+          task._lastTry = Date.now();
+          savePendingSyncTasks();
+          failCount++;
+          addDebugLog('待同步任务 ' + task.id + ' 同步失败: ' + error.message);
+        }
+      }
+
+      addDebugLog('同步完成：成功 ' + successCount + ' 个，失败 ' + failCount + ' 个');
+      if (successCount > 0) {
+        saveLastSyncTime();
+        showToast('同步完成：成功 ' + successCount + ' 个任务');
+      }
+      if (failCount > 0) {
+        showToast('有 ' + failCount + ' 个任务同步失败，将稍后重试');
+      }
+    }
+
     // Check if Supabase is configured (always true with preset config)
     function isSupabaseConfigured() {
       return true;
@@ -2548,13 +2667,23 @@
     function updateSyncTimeDisplay(timeStr) {
       const el = document.getElementById('syncTimeText');
       if (el) {
-        el.textContent = '同步时间：' + (timeStr || '--');
+        const pendingCount = pendingSyncTasks.length;
+        let text = '同步时间：' + (timeStr || '--');
+        if (pendingCount > 0) {
+          text += ' (待同步: ' + pendingCount + ')';
+        }
+        el.textContent = text;
       }
     }
 
     function loadLastSyncTime() {
       const saved = localStorage.getItem('todomaster_last_sync');
       updateSyncTimeDisplay(saved);
+    }
+
+    // 更新待同步任务显示
+    function updatePendingSyncDisplay() {
+      updateSyncTimeDisplay(localStorage.getItem('todomaster_last_sync'));
     }
 
     function openAuthModal() {
@@ -2581,7 +2710,7 @@
             title.textContent = '邮箱登录';
             body.innerHTML = `
               <div id="emailLoginSection">
-                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱地址，我们将发送 6 位验证码到您的邮箱。</p>
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">输入邮箱地址，我们将发送验证码到您的邮箱。</p>
                 <div class="form-group">
                   <label class="form-label required">邮箱地址</label>
                   <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com">
@@ -2798,6 +2927,44 @@
       }
       console.log(log);
     }
+
+    // 显示临时提示消息
+    function showToast(message, duration = 3000) {
+      // 移除已有的toast
+      const existingToast = document.getElementById('toast-message');
+      if (existingToast) {
+        existingToast.remove();
+      }
+
+      // 创建新的toast
+      const toast = document.createElement('div');
+      toast.id = 'toast-message';
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 24px;
+        font-size: 14px;
+        z-index: 10000;
+        max-width: 80%;
+        text-align: center;
+        animation: fadeIn 0.3s ease;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      // 自动移除
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.style.animation = 'fadeOut 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, duration);
+    }
     
     function toggleDebugPanel() {
       const panel = document.getElementById('debugPanel');
@@ -2819,6 +2986,7 @@
           addDebugLog('已有会话，用户: ' + (currentUser.email || currentUser.id));
           updateSyncStatus('synced', currentUser.phone || '已登录');
           await loadTasksFromSupabase();
+          await syncPendingTasks();
         } else {
           addDebugLog('无会话');
           updateSyncStatus('synced', '未登录');
@@ -3043,15 +3211,22 @@
     // ==================== Supabase Operations ====================
     async function saveTaskToSupabase(task) {
       if (!supabaseClient || !currentUser) {
-        console.log('saveTaskToSupabase: supabaseClient or currentUser is null');
+        addDebugLog('saveTaskToSupabase: 未登录，添加到待同步队列');
+        addToPendingSync(task);
         return;
       }
-      
+
       addDebugLog('保存任务: ' + task.id + ', 场景: ' + state.currentScene);
-      console.log('saveTaskToSupabase: Saving task:', task.id, 'for user:', currentUser.id, 'scene:', state.currentScene);
-      
+
+      // 先保存到本地，确保数据不会丢失
+      saveTasksLocal();
+
+      // 设置超时 Promise - 10秒超时，更快反馈
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('保存超时（10秒）')), 10000);
+      });
+
       try {
-        // 构造保存的数据，确保 user_id 正确设置
         const taskData = {
           id: task.id,
           user_id: currentUser.id,
@@ -3067,24 +3242,28 @@
           postponeHistory: task.postponeHistory || [],
           createdAt: task.createdAt || Date.now()
         };
-        
-        addDebugLog('准备保存数据: ' + JSON.stringify(taskData).substring(0, 100));
-        console.log('saveTaskToSupabase: taskData:', taskData);
-        
-        const { data, error } = await supabaseClient
+
+        addDebugLog('准备保存数据...');
+
+        const savePromise = supabaseClient
           .from('tasks_' + state.currentScene)
           .upsert(taskData);
-          
-        console.log('saveTaskToSupabase: Result:', { data, error });
-        addDebugLog('保存结果: ' + (error ? '错误 - ' + error.message : '成功'));
-          
-        if (error) {
-          throw error;
-        }
-        addDebugLog('任务保存成功');
+
+        // 使用 Promise.race 实现超时
+        const { data, error } = await Promise.race([savePromise, timeoutPromise]);
+
+        if (error) throw error;
+
+        addDebugLog('✓ 任务保存成功');
+        saveLastSyncTime();
+        // 如果之前在待同步队列，移除它
+        removeFromPendingSync(task.id);
       } catch (error) {
         console.error('Failed to save to Supabase:', error);
-        addDebugLog('保存异常: ' + error.message);
+        addDebugLog('✗ 保存失败: ' + error.message + '，已缓存到本地待同步');
+        addToPendingSync(task);
+        // 显示提示给用户
+        showToast('网络异常，任务已保存到本地，稍后自动同步');
       }
     }
 
@@ -3732,8 +3911,13 @@
           const stEl = document.createElement('div');
           stEl.className = 'day-task-item subtask-day-item priority-' + (st.priority || 'normal');
 
+          if (st.completed) {
+            stEl.classList.add('completed');
+          }
+
           const checkbox = document.createElement('div');
-          checkbox.className = 'day-task-checkbox';
+          checkbox.className = `day-task-checkbox ${st.completed ? 'checked' : ''}`;
+          checkbox.innerHTML = st.completed ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
           checkbox.onclick = (e) => {
             e.stopPropagation();
             toggleSubtaskComplete(pt.id, st.id);
@@ -4869,7 +5053,7 @@
 
       // Initialize Supabase
       await initSupabase();
-      
+
       // Open auth modal on first load (only if not logged in)
       setTimeout(() => {
         const isLoggedIn = localStorage.getItem('todomaster_logged_in');
@@ -4877,6 +5061,35 @@
           openAuthModal();
         }
       }, 500);
+
+      // 定期同步待同步任务（每30秒）
+      setInterval(() => {
+        if (currentUser && supabaseClient) {
+          syncPendingTasks();
+        }
+      }, 30000);
+
+      // 网络恢复时自动同步
+      window.addEventListener('online', () => {
+        addDebugLog('网络已恢复，开始同步待同步任务');
+        showToast('网络已恢复，正在同步数据...');
+        if (currentUser && supabaseClient) {
+          syncPendingTasks();
+        }
+      });
+
+      // 页面重新可见时同步（比如从后台切回）
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && currentUser && supabaseClient) {
+          addDebugLog('页面重新可见，检查待同步任务');
+          syncPendingTasks();
+        }
+      });
+
+      // 页面加载完成后立即尝试同步
+      if (pendingSyncTasks.length > 0) {
+        addDebugLog('页面加载时发现 ' + pendingSyncTasks.length + ' 个待同步任务');
+      }
     }
 
     init();
