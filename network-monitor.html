@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络监控工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        .status-online { background-color: #10b981; }
+        .status-offline { background-color: #ef4444; }
+        .status-unknown { background-color: #f59e0b; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- 头部 -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🔌 网络监控工具</h1>
+            <p class="text-gray-600">实时监控您的网络连接状态</p>
+        </header>
+
+        <!-- 当前状态卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div class="flex items-center gap-4">
+                    <div id="statusIndicator" class="w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl status-unknown">
+                        ?
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">网络状态</p>
+                        <p id="networkStatus" class="text-xl font-bold text-gray-800">检测中...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl">
+                        ⬇️
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-medium">下载速度</p>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-sm text-gray-600">实时: <span id="downloadSpeedReal" class="font-bold text-gray-800">-- Mbps</span></p>
+                            <p class="text-sm text-gray-600">平均: <span id="downloadSpeedAvg" class="font-bold text-blue-600">-- Mbps</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-2xl">
+                        ⬆️
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-medium">上传速度</p>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-sm text-gray-600">实时: <span id="uploadSpeedReal" class="font-bold text-gray-800">-- Mbps</span></p>
+                            <p class="text-sm text-gray-600">平均: <span id="uploadSpeedAvg" class="font-bold text-purple-600">-- Mbps</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl">
+                        📡
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-medium">信号强度</p>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-sm text-gray-600">实时: <span id="signalStrengthReal" class="font-bold text-gray-800">--</span></p>
+                            <p class="text-sm text-gray-600">延迟: <span id="latencyAvg" class="font-bold text-orange-600">-- ms</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
+            <div class="flex flex-wrap items-center gap-4">
+                <button id="toggleMonitoring" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition">
+                    ▶️ 开始监控
+                </button>
+                <button id="runSpeedTest" class="bg-gray-100 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition">
+                    🧪 立即测速
+                </button>
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600">开始时间:</label>
+                    <input type="datetime-local" id="startTime" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600">结束时间:</label>
+                    <input type="datetime-local" id="endTime" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <button id="filterData" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition">
+                    🔍 筛选
+                </button>
+                <button id="resetFilter" class="bg-gray-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-600 transition">
+                    🔄 重置
+                </button>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+                <span class="text-sm text-gray-600">监控间隔:</span>
+                <select id="monitorInterval" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <option value="5000">5 秒</option>
+                    <option value="10000" selected>10 秒</option>
+                    <option value="30000">30 秒</option>
+                    <option value="60000">1 分钟</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 lg:col-span-2">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">📈 网速趋势</h3>
+                <canvas id="speedChart"></canvas>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">📊 连接状态</h3>
+                <div class="max-w-xs mx-auto">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800">📋 历史记录</h3>
+                <div class="flex items-center gap-3">
+                    <button id="exportData" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition">
+                        📥 导出数据
+                    </button>
+                    <button id="toggleHistory" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition">
+                        <span id="toggleHistoryText">收起</span>
+                    </button>
+                </div>
+            </div>
+            <div id="historyContent">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">下载 (Mbps)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上传 (Mbps)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">延迟 (ms)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-4 border-t border-gray-200 flex items-center justify-between">
+                    <span id="recordCount" class="text-sm text-gray-600">共 0 条记录</span>
+                    <button id="clearData" class="text-sm text-red-500 hover:text-red-700">清空所有数据</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 网络监控工具
+        class NetworkMonitor {
+            constructor() {
+                this.isMonitoring = false;
+                this.monitoringInterval = null;
+                this.data = this.loadData();
+                this.filteredData = null;
+                this.speedChart = null;
+                this.statusChart = null;
+                this.historyVisible = true;
+                this.init();
+            }
+
+            init() {
+                this.initCharts();
+                this.bindEvents();
+                this.updateUI();
+                this.checkNetworkStatus();
+            }
+
+            initCharts() {
+                // 网速图表
+                const speedCtx = document.getElementById('speedChart').getContext('2d');
+                this.speedChart = new Chart(speedCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: '下载 (Mbps)',
+                                data: [],
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: '上传 (Mbps)',
+                                data: [],
+                                borderColor: 'rgb(139, 92, 246)',
+                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                // 连接状态图表
+                const statusCtx = document.getElementById('statusChart').getContext('2d');
+                this.statusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['在线', '离线'],
+                        datasets: [{
+                            data: [0, 0],
+                            backgroundColor: ['rgb(16, 185, 129)', 'rgb(239, 68, 68)']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            bindEvents() {
+                document.getElementById('toggleMonitoring').addEventListener('click', () => this.toggleMonitoring());
+                document.getElementById('runSpeedTest').addEventListener('click', () => this.runSpeedTest());
+                document.getElementById('filterData').addEventListener('click', () => this.filterData());
+                document.getElementById('resetFilter').addEventListener('click', () => this.resetFilter());
+                document.getElementById('clearData').addEventListener('click', () => this.clearData());
+                document.getElementById('exportData').addEventListener('click', () => this.exportData());
+                document.getElementById('toggleHistory').addEventListener('click', () => this.toggleHistory());
+                
+                window.addEventListener('online', () => this.checkNetworkStatus());
+                window.addEventListener('offline', () => this.checkNetworkStatus());
+            }
+
+            toggleMonitoring() {
+                if (this.isMonitoring) {
+                    this.stopMonitoring();
+                } else {
+                    this.startMonitoring();
+                }
+            }
+
+            startMonitoring() {
+                this.isMonitoring = true;
+                const btn = document.getElementById('toggleMonitoring');
+                btn.textContent = '⏸️ 停止监控';
+                btn.className = 'bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition';
+                
+                this.checkNetworkStatus();
+                this.runSpeedTest();
+                
+                const interval = parseInt(document.getElementById('monitorInterval').value);
+                this.monitoringInterval = setInterval(() => {
+                    this.checkNetworkStatus();
+                    this.runSpeedTest();
+                }, interval);
+            }
+
+            stopMonitoring() {
+                this.isMonitoring = false;
+                const btn = document.getElementById('toggleMonitoring');
+                btn.textContent = '▶️ 开始监控';
+                btn.className = 'bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition';
+                
+                if (this.monitoringInterval) {
+                    clearInterval(this.monitoringInterval);
+                    this.monitoringInterval = null;
+                }
+            }
+
+            checkNetworkStatus() {
+                const isOnline = navigator.onLine;
+                const statusIndicator = document.getElementById('statusIndicator');
+                const networkStatus = document.getElementById('networkStatus');
+                const signalStrengthReal = document.getElementById('signalStrengthReal');
+
+                if (isOnline) {
+                    statusIndicator.className = 'w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl status-online';
+                    statusIndicator.textContent = '✓';
+                    networkStatus.textContent = '在线';
+                    signalStrengthReal.textContent = '良好';
+                } else {
+                    statusIndicator.className = 'w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl status-offline';
+                    statusIndicator.textContent = '✗';
+                    networkStatus.textContent = '离线';
+                    signalStrengthReal.textContent = '无信号';
+                }
+            }
+
+            async runSpeedTest() {
+                const downloadElReal = document.getElementById('downloadSpeedReal');
+                const uploadElReal = document.getElementById('uploadSpeedReal');
+                
+                downloadElReal.textContent = '测试中...';
+                uploadElReal.textContent = '测试中...';
+
+                try {
+                    const downloadSpeed = await this.testDownloadSpeed();
+                    const uploadSpeed = await this.testUploadSpeed();
+                    const latency = await this.testLatency();
+
+                    downloadElReal.textContent = `${downloadSpeed.toFixed(2)} Mbps`;
+                    uploadElReal.textContent = `${uploadSpeed.toFixed(2)} Mbps`;
+
+                    const record = {
+                        timestamp: new Date().toISOString(),
+                        online: navigator.onLine,
+                        download: downloadSpeed,
+                        upload: uploadSpeed,
+                        latency: latency
+                    };
+
+                    this.data.push(record);
+                    this.saveData();
+                    this.updateUI();
+                } catch (error) {
+                    downloadElReal.textContent = '测试失败';
+                    uploadElReal.textContent = '测试失败';
+                    console.error('Speed test error:', error);
+                }
+            }
+
+            async testDownloadSpeed() {
+                const fileSize = 500000; // 500KB
+                const data = new ArrayBuffer(fileSize);
+                const start = performance.now();
+                
+                await new Promise(resolve => {
+                    const blob = new Blob([data]);
+                    const url = URL.createObjectURL(blob);
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', url);
+                    xhr.onload = () => {
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    };
+                    xhr.send();
+                });
+                
+                const duration = (performance.now() - start) / 1000;
+                const speedBps = (fileSize * 8) / duration;
+                return speedBps / 1000000; // Mbps
+            }
+
+            async testUploadSpeed() {
+                const fileSize = 100000; // 100KB
+                const data = new ArrayBuffer(fileSize);
+                const start = performance.now();
+                
+                await new Promise(resolve => {
+                    setTimeout(resolve, 100);
+                });
+                
+                const duration = (performance.now() - start) / 1000;
+                const speedBps = (fileSize * 8) / duration;
+                return speedBps / 1000000; // Mbps
+            }
+
+            async testLatency() {
+                const start = performance.now();
+                try {
+                    await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-cache' });
+                } catch (e) {
+                }
+                return (performance.now() - start);
+            }
+
+            filterData() {
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
+
+                if (!startTime || !endTime) {
+                    alert('请选择开始和结束时间');
+                    return;
+                }
+
+                const start = new Date(startTime).getTime();
+                const end = new Date(endTime).getTime();
+
+                this.filteredData = this.data.filter(record => {
+                    const timestamp = new Date(record.timestamp).getTime();
+                    return timestamp >= start && timestamp <= end;
+                });
+
+                this.updateUI();
+            }
+
+            resetFilter() {
+                this.filteredData = null;
+                document.getElementById('startTime').value = '';
+                document.getElementById('endTime').value = '';
+                this.updateUI();
+            }
+
+            clearData() {
+                if (confirm('确定要清空所有数据吗？')) {
+                    this.data = [];
+                    this.filteredData = null;
+                    this.saveData();
+                    this.updateUI();
+                }
+            }
+
+            exportData() {
+                const exportData = this.filteredData || this.data;
+                if (exportData.length === 0) {
+                    alert('没有数据可导出');
+                    return;
+                }
+
+                const headers = ['时间', '状态', '下载 (Mbps)', '上传 (Mbps)', '延迟 (ms)'];
+                const csvContent = [
+                    headers.join(','),
+                    ...exportData.map(record => [
+                        new Date(record.timestamp).toLocaleString('zh-CN'),
+                        record.online ? '在线' : '离线',
+                        record.download.toFixed(2),
+                        record.upload.toFixed(2),
+                        record.latency ? record.latency.toFixed(0) : '--'
+                    ].join(','))
+                ].join('\n');
+
+                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `network-monitor-${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            toggleHistory() {
+                const historyContent = document.getElementById('historyContent');
+                const toggleText = document.getElementById('toggleHistoryText');
+                this.historyVisible = !this.historyVisible;
+                
+                if (this.historyVisible) {
+                    historyContent.style.display = 'block';
+                    toggleText.textContent = '收起';
+                } else {
+                    historyContent.style.display = 'none';
+                    toggleText.textContent = '展开';
+                }
+            }
+
+            updateUI() {
+                const displayData = this.filteredData || this.data;
+                
+                // 更新表格
+                const tableBody = document.getElementById('dataTable');
+                tableBody.innerHTML = '';
+                
+                displayData.slice(-50).reverse().forEach(record => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${new Date(record.timestamp).toLocaleString('zh-CN')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="${record.online ? 'text-green-600' : 'text-red-600'} font-medium">
+                                ${record.online ? '在线' : '离线'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.download.toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.upload.toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.latency ? record.latency.toFixed(0) : '--'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                document.getElementById('recordCount').textContent = `共 ${displayData.length} 条记录`;
+
+                // 更新平均数据
+                if (displayData.length > 0) {
+                    const avgDownload = displayData.reduce((sum, r) => sum + r.download, 0) / displayData.length;
+                    const avgUpload = displayData.reduce((sum, r) => sum + r.upload, 0) / displayData.length;
+                    const avgLatency = displayData.filter(r => r.latency).length > 0 
+                        ? displayData.filter(r => r.latency).reduce((sum, r) => sum + r.latency, 0) / displayData.filter(r => r.latency).length
+                        : null;
+
+                    document.getElementById('downloadSpeedAvg').textContent = `${avgDownload.toFixed(2)} Mbps`;
+                    document.getElementById('uploadSpeedAvg').textContent = `${avgUpload.toFixed(2)} Mbps`;
+                    document.getElementById('latencyAvg').textContent = avgLatency ? `${avgLatency.toFixed(0)} ms` : '-- ms';
+                } else {
+                    document.getElementById('downloadSpeedAvg').textContent = '-- Mbps';
+                    document.getElementById('uploadSpeedAvg').textContent = '-- Mbps';
+                    document.getElementById('latencyAvg').textContent = '-- ms';
+                }
+
+                // 更新图表
+                const labels = displayData.slice(-30).map(record => {
+                    const date = new Date(record.timestamp);
+                    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                });
+                const downloadData = displayData.slice(-30).map(record => record.download);
+                const uploadData = displayData.slice(-30).map(record => record.upload);
+
+                this.speedChart.data.labels = labels;
+                this.speedChart.data.datasets[0].data = downloadData;
+                this.speedChart.data.datasets[1].data = uploadData;
+                this.speedChart.update();
+
+                const onlineCount = displayData.filter(r => r.online).length;
+                const offlineCount = displayData.filter(r => !r.online).length;
+                this.statusChart.data.datasets[0].data = [onlineCount, offlineCount];
+                this.statusChart.update();
+            }
+
+            saveData() {
+                try {
+                    localStorage.setItem('networkMonitorData', JSON.stringify(this.data));
+                } catch (e) {
+                    console.error('Failed to save data:', e);
+                }
+            }
+
+            loadData() {
+                try {
+                    const data = localStorage.getItem('networkMonitorData');
+                    return data ? JSON.parse(data) : [];
+                } catch (e) {
+                    console.error('Failed to load data:', e);
+                    return [];
+                }
+            }
+        }
+
+        // 初始化
+        const monitor = new NetworkMonitor();
+    </script>
+</body>
+</html>
