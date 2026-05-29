@@ -4556,6 +4556,22 @@
     state.editingSubtaskIndex = -1;
     state.editingSubtaskPriority = 'normal';
 
+    // Postpone subtask in modal - open postpone popup
+    function postponeModalSubtask(index) {
+      const st = state.modalSubtasks[index];
+      if (!st) return;
+
+      state.postponingSubtaskIndex = index;
+      state.directPostponingSubtask = null;
+
+      document.getElementById('subtaskPostponeName').textContent = st.content || '未命名子任务';
+      const currentDue = st.dueDate || '';
+      document.getElementById('subtaskCurrentDueDate').textContent = currentDue ? formatDateLocale(st.dueDate) : '未设置';
+      document.getElementById('subtaskNewDueDate').value = st.dueDate || '';
+
+      document.getElementById('subtaskPostponeModal').classList.remove('hidden');
+    }
+
     // Edit subtask in modal - open edit popup
     function editModalSubtask(index) {
       const st = state.modalSubtasks[index];
