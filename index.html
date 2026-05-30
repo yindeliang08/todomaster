@@ -2622,12 +2622,12 @@
       if (!exists) {
         pendingSyncTasks.push({
           ...task,
-          _scene: state.currentScene,
+          _scene: task.scene || state.currentScene, // 优先使用任务自身的 scene
           _retryCount: 0,
           _lastTry: Date.now()
         });
         savePendingSyncTasks();
-        addDebugLog('已添加到待同步队列，当前待同步: ' + pendingSyncTasks.length + ' 个任务');
+        addDebugLog('已添加到待同步队列，当前待同步: ' + pendingSyncTasks.length + ' 个任务，场景: ' + (task.scene || state.currentScene));
       }
     }
 
@@ -2663,7 +2663,9 @@
 
         try {
           const currentScene = state.currentScene;
-          state.currentScene = task._scene || 'work';
+          // 使用任务自身的 scene 属性，如果没有则使用 _scene（待同步时记录的场景）
+          const taskScene = task.scene || task._scene || 'work';
+          state.currentScene = taskScene;
 
           const taskData = {
             id: task.id,
@@ -3534,7 +3536,8 @@
         postponeHistory: [],
         subtasks: subtasks,
         priority: priority,
-        tag: tag
+        tag: tag,
+        scene: state.currentScene // 记录任务所属场景
       };
       state.tasks.push(task);
       saveTasksLocal();
